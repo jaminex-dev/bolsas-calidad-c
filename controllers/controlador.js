@@ -86,7 +86,8 @@ function generarFormEditarUnificado(obj) {
     let empresaOptions = $('#empresa').html();
     let centroOptions = $('#centroDespacho').html();
     let productoOptions = $('#producto').html();
-    let tipoOrigenOptions = $('#tipoOrigen').html();
+    let tipoDestinoOptions = $('#tipoDestino').html();
+    let destinoOptions = $('#destino').html();
     let origenesOptions = $('#origenes').html();
     // Generar tarjetas y separar bloques
     let tarjetasHtml = generarTarjetas(numBolsas, viajesArr, analisisArr, 'editar');
@@ -111,11 +112,13 @@ function generarFormEditarUnificado(obj) {
             </select></div>
         </div>
         <div class='form-row'>
-          <div class='form-group col-md-6'><label>Tipo Origen</label>
-            <select class='form-control' id='editTipoOrigen' required>${tipoOrigenOptions}</select></div>
-          <div class='form-group col-md-3'><label>Bolsas</label>
+          <div class='form-group col-md-4'><label>Tipo Destino</label>
+            <select class='form-control' id='editTipoDestino' required>${tipoDestinoOptions}</select></div>
+          <div class='form-group col-md-4'><label>Destino</label>
+            <select class='form-control' id='editDestino' required>${destinoOptions}</select></div>
+          <div class='form-group col-md-2'><label>Bolsas</label>
             <input type='number' min='1' max='6' class='form-control' id='editBolsas' value='${numBolsas}' required></div>
-          <div class='form-group col-md-3'><label>Orígenes</label>
+          <div class='form-group col-md-2'><label>Orígenes</label>
             <select class='form-control' id='editOrigenes' required>${origenesOptions}</select></div>
         </div>
         <div class='row'>
@@ -166,10 +169,10 @@ function recargarTablaConfiguraciones() {
                 res.data.forEach(function(item) {
                     tablaConfiguraciones.row.add([
                         item.empresaNombre || item.empresa || '',
-                        item.centroNombre || item.centro || '',
+                        item.centroDespacho || item.centro || '',
                         item.productoNombre || item.producto || '',
                         item.tipoMovimiento || '',
-                        item.tipoOrigenNombre || item.tipoOrigen || '',
+                        item.tipoDestinoNombre || item.tipoDestino || '',
                         item.bolsas || '',
                         (item.detalles ? item.detalles.map(d => d.viajes).join(', ') : ''),
                         (item.detalles ? item.detalles.map(d => d.tipoAnalisisNombre || d.idTipoAnalisis).join(', ') : ''),
@@ -191,6 +194,42 @@ function recargarTablaConfiguraciones() {
 }
  
 $(document).ready(function() {
+    // Lógica condicional para mostrar/ocultar campos según Tipo Movimiento
+    function actualizarCamposPorMovimiento() {
+        const tipoMovimiento = $('#tipoMovimiento').val();
+        if (tipoMovimiento === 'DESPACHO') {
+            // Mostrar y requerir destino y tipoDestino, ocultar y limpiar origenes
+            $('#tipoDestino').closest('.form-group').show().find('select').prop('required', true);
+            $('#destino').closest('.form-group').show().find('select').prop('required', true);
+            $('#origenes').closest('.form-group').hide().find('select').prop('required', false).val('');
+        } else if (tipoMovimiento === 'RECEPCIÓN') {
+            // Mostrar y requerir origenes, ocultar y limpiar destino y tipoDestino
+            $('#tipoDestino').closest('.form-group').hide().find('select').prop('required', false).val('');
+            $('#destino').closest('.form-group').hide().find('select').prop('required', false).val('');
+            $('#origenes').closest('.form-group').show().find('select').prop('required', true);
+        } else {
+            // Si no hay selección, ocultar todos y limpiar
+            $('#tipoDestino').closest('.form-group').hide().find('select').prop('required', false).val('');
+            $('#destino').closest('.form-group').hide().find('select').prop('required', false).val('');
+            $('#origenes').closest('.form-group').hide().find('select').prop('required', false).val('');
+        }
+    }
+    // Inicializar visibilidad al cargar
+    actualizarCamposPorMovimiento();
+    // Evento cambio de tipoMovimiento
+    $('#tipoMovimiento').on('change', function() {
+        actualizarCamposPorMovimiento();
+        // Limpiar selects relacionados al cambiar tipo de movimiento
+        $('#tipoDestino').val('');
+        $('#destino').val('');
+        $('#origenes').val('');
+    });
+    // Ocultar campos al limpiar
+    $('#btnLimpiar').on('click', function() {
+        $('#tipoDestino').closest('.form-group').hide().find('select').prop('required', false);
+        $('#destino').closest('.form-group').hide().find('select').prop('required', false);
+        $('#origenes').closest('.form-group').hide().find('select').prop('required', false);
+    });
     if ($.fn.DataTable.isDataTable('#tablaConfiguraciones')) {
         $('#tablaConfiguraciones').DataTable().destroy();
     }
@@ -202,10 +241,10 @@ $(document).ready(function() {
         lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "Todos"]],
         columns: [
             { title: 'Empresa' },
-            { title: 'Centro' },
+            { title: 'Centro Despacho' },
             { title: 'Producto' },
             { title: 'Movimiento' },
-            { title: 'Tipo Origen' },
+            { title: 'Tipo Destino' },
             { title: 'Bolsas' },
             { title: 'Viajes' },
             { title: 'Análisis' },
@@ -310,11 +349,36 @@ $(document).ready(function() {
             }
         });
     }
+    // Cargar destino (RESTful, igual que proveedores pero función separada)
+    function cargarDestinoSelect(selector) {
+        $.ajax({
+            url: '../servicios/api-bolsa-calidad/api.php/proveedores',
+            method: 'GET',
+            dataType: 'json',
+            success: function(res) {
+                if(res.success && Array.isArray(res.data)) {
+                    var $select = $(selector);
+                    $select.empty();
+                    $select.append('<option value="">Seleccione...</option>');
+                    res.data.forEach(function(prov) {
+                        $select.append('<option value="'+prov.idProveedor+'">'+prov.Proveedor+'</option>');
+                    });
+                } else {
+                    mostrarAlerta('No se pudieron cargar los destinos', 'danger');
+                }
+            },
+            error: function(xhr, status, error) {
+                mostrarAlerta('Error al consultar destinos: ' + xhr.responseText, 'danger');
+            }
+        });
+    }
+
     // Llenar todos los campos
     cargarProveedoresSelect('#empresa');
     cargarProveedoresSelect('#centroDespacho');
-    cargarProveedoresSelect('#tipoOrigen');
+    cargarProveedoresSelect('#tipoDestino');
     cargarProveedoresSelect('#origenes');
+    cargarDestinoSelect('#destino');
     cargarProductosSelect('#producto');
     cargarTiposAnalisisSelect('#tipoAnalisis');
 
@@ -373,6 +437,13 @@ $(document).ready(function() {
     });
 
     // Funciones para obtener nombre por ID
+    function getDestinoNombre(id) {
+        let nombre = id;
+        $('#destino option').each(function() {
+            if ($(this).val() == id) nombre = $(this).text();
+        });
+        return nombre;
+    }
     function getProveedorNombre(id) {
         let nombre = id;
         $('#empresa option').each(function() {
@@ -394,15 +465,22 @@ $(document).ready(function() {
         });
         return nombre;
     }
-    function getTipoOrigenNombre(id) {
+    function getTipoDestinoNombre(id) {
         let nombre = id;
-        $('#tipoOrigen option').each(function() {
+        $('#tipoDestino option').each(function() {
             if ($(this).val() == id) nombre = $(this).text();
         });
         return nombre;
     }
 
     // --- Funciones para obtener nombre por ID para edición (usando selects del formulario principal) ---
+    function getDestinoNombreByValue(value) {
+        let nombre = value;
+        $('#destino option').each(function() {
+            if ($(this).val() == value) nombre = $(this).text();
+        });
+        return nombre;
+    }
     function getProveedorNombreByValue(value) {
         let nombre = value;
         $('#empresa option').each(function() {
@@ -424,9 +502,9 @@ $(document).ready(function() {
         });
         return nombre;
     }
-    function getTipoOrigenNombreByValue(value) {
+    function getTipoDestinoNombreByValue(value) {
         let nombre = value;
-        $('#tipoOrigen option').each(function() {
+        $('#tipoDestino option').each(function() {
             if ($(this).val() == value) nombre = $(this).text();
         });
         return nombre;
@@ -436,6 +514,25 @@ $(document).ready(function() {
     $('#formRestricciones').on('submit', function(e) {
         e.preventDefault();
         let valid = true;
+        const tipoMovimiento = $('#tipoMovimiento').val();
+        // Validación según tipo de movimiento
+        if (!$('#empresa').val()) { $('#empresa').addClass('is-invalid'); valid = false; }
+        if (!$('#centroDespacho').val()) { $('#centroDespacho').addClass('is-invalid'); valid = false; }
+        if (!$('#producto').val()) { $('#producto').addClass('is-invalid'); valid = false; }
+        if (!tipoMovimiento) { $('#tipoMovimiento').addClass('is-invalid'); valid = false; }
+        if (tipoMovimiento === 'DESPACHO') {
+            if (!$('#tipoDestino').val()) { $('#tipoDestino').addClass('is-invalid'); valid = false; }
+            if (!$('#destino').val()) { $('#destino').addClass('is-invalid'); valid = false; }
+        }
+        if (tipoMovimiento === 'RECEPCIÓN') {
+            if (!$('#origenes').val()) { $('#origenes').addClass('is-invalid'); valid = false; }
+        }
+        if (!$('#bolsasCalidad').val() || isNaN($('#bolsasCalidad').val()) || $('#bolsasCalidad').val() < 1 || $('#bolsasCalidad').val() > 6) {
+            $('#bolsasCalidad').addClass('is-invalid'); valid = false;
+        }
+        // Validar detalles
+        $('.viajes-bolsa').each(function(){ if (!$(this).val()) { $(this).addClass('is-invalid'); valid = false; } });
+        $('.tipo-analisis').each(function(){ if (!$(this).val()) { $(this).addClass('is-invalid'); valid = false; } });
         if (!valid) {
             mostrarAlerta('Por favor complete todos los campos obligatorios.', 'danger');
             return;
@@ -444,9 +541,9 @@ $(document).ready(function() {
         const empresa = $('#empresa').val();
         const centro = $('#centroDespacho').val();
         const producto = $('#producto').val();
-        const tipoMovimiento = $('#tipoMovimiento').val();
-        const tipoOrigen = $('#tipoOrigen').val();
-        const origen = $('#origenes').val();
+        const tipoDestino = tipoMovimiento === 'DESPACHO' ? $('#tipoDestino').val() : null;
+        const destino = tipoMovimiento === 'DESPACHO' ? $('#destino').val() : null;
+        const origen = tipoMovimiento === 'RECEPCIÓN' ? $('#origenes').val() : null;
         const bolsas = $('#bolsasCalidad').val();
         const aplicaOrden = $('#aplicaOrden').is(':checked') ? 1 : 0;
         let detalles = [];
@@ -469,7 +566,8 @@ $(document).ready(function() {
                 centro,
                 producto,
                 tipoMovimiento,
-                tipoOrigen,
+                tipoDestino,
+                destino,
                 origen,
                 bolsas,
                 aplicaOrden,
@@ -519,7 +617,8 @@ $(document).ready(function() {
             $('#editCentro').val(item.centro);
             $('#editProducto').val(item.producto);
             $('#editMovimiento').val(item.tipoMovimiento);
-            $('#editTipoOrigen').val(item.tipoOrigen);
+            $('#editTipoDestino').val(item.tipoDestino);
+            $('#editDestino').val(item.destino);
             $('#editOrigenes').val(item.origen);
             $('#modalEditar').modal('show');
         });
@@ -598,7 +697,7 @@ $(document).ready(function() {
             const centro = $('#editCentro').val();
             const producto = $('#editProducto').val();
             const tipoMovimiento = $('#editMovimiento').val();
-            const tipoOrigen = $('#editTipoOrigen').val();
+            const tipoDestino = $('#editTipoDestino').val();
             const origen = $('#editOrigenes').val();
             const bolsas = $('#editBolsas').val();
             const aplicaOrden = $('#editOrdenPuerto').is(':checked') ? 1 : 0;
@@ -612,7 +711,7 @@ $(document).ready(function() {
                     centro,
                     producto,
                     tipoMovimiento,
-                    tipoOrigen,
+                    tipoDestino,
                     origen,
                     bolsas,
                     aplicaOrden,

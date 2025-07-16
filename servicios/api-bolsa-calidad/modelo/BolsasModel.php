@@ -10,11 +10,12 @@ class BolsasModel {
         $empresaMap = $this->getNombres('vDestino', 'idProveedor', 'Proveedor');
         $centroMap = $this->getNombres('vDestino', 'idProveedor', 'Proveedor');
         $productoMap = $this->getNombres('vclasificacion', 'idProducto', 'Producto');
-        $tipoOrigenMap = $this->getNombres('vDestino', 'idProveedor', 'Proveedor');
+        $tipoDestinoMap = $this->getNombres('vDestino', 'idProveedor', 'Proveedor');
+        $destinoMap = $this->getNombres('vDestino', 'idProveedor', 'Proveedor');
         $tipoAnalisisMap = $this->getNombres('TipoAnalisis', 'idTipoAnalisis', 'Descripcion');
 
         // Consulta principal para obtener las bolsas de calidad
-        $sql = "SELECT b.id, b.empresa, b.centro, c.Descripcion as centroNombre, b.producto, b.tipoMovimiento, b.tipoOrigen, b.origen, b.bolsas, b.aplicaOrden, b.activo, b.fechaCreacion
+        $sql = "SELECT b.id, b.empresa, b.centro, c.Descripcion as centroDespacho, b.producto, b.tipoMovimiento, b.tipoDestino, b.destino, b.origen, b.bolsas, b.aplicaOrden, b.activo, b.fechaCreacion
                 FROM BolsasCalidad b
                 LEFT JOIN vDestino c ON b.centro = c.idDestino
                 WHERE b.activo = 1 ORDER BY b.fechaCreacion ASC";
@@ -31,10 +32,11 @@ class BolsasModel {
         // Procesar los datos de las bolsas
         foreach ($bolsas as &$bolsa) {
             $bolsa['empresaNombre'] = $empresaMap[$bolsa['empresa']] ?? $bolsa['empresa'];
-            $bolsa['centroNombre'] = $centroMap[$bolsa['centro']] ?? $bolsa['centro'];
+            $bolsa['centroDespacho'] = $centroMap[$bolsa['centro']] ?? $bolsa['centro'];
             $bolsa['productoNombre'] = $productoMap[$bolsa['producto']] ?? $bolsa['producto'];            
-            $bolsa['tipoOrigenNombre'] = $tipoOrigenMap[$bolsa['tipoOrigen']] ?? $bolsa['tipoOrigen'];
-            $bolsa['origenNombre'] = $tipoOrigenMap[$bolsa['origen']] ?? $bolsa['origen'];
+            $bolsa['tipoDestinoNombre'] = $tipoDestinoMap[$bolsa['tipoDestino']] ?? $bolsa['tipoDestino'];
+            $bolsa['destinoNombre'] = $destinoMap[$bolsa['destino']] ?? ($bolsa['destino'] ?? '');
+            $bolsa['origenNombre'] = $tipoDestinoMap[$bolsa['origen']] ?? $bolsa['origen'];
             $sqlDet = "SELECT d.numeroBolsa, d.viajes, d.idTipoAnalisis FROM BolsasCalidadDetalle d WHERE d.idBolsasCalidad = ?";
             $params = array($bolsa['id']);
             $stmtDet = sqlsrv_query($conn, $sqlDet, $params);
@@ -68,39 +70,70 @@ class BolsasModel {
     }
 
     public function guardarDatos($data) {
+        error_log('OJO: Iniciando guardarDatos');
         global $conn;
         $idBolsasCalidad = $this->generateGuid();
-        $sql = "INSERT INTO BolsasCalidad (id, empresa, centro, producto, tipoMovimiento, tipoOrigen, origen, bolsas, aplicaOrden, activo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)";
+        error_log('OJO: GUID generado: ' . $idBolsasCalidad);
+        $sql = "INSERT INTO BolsasCalidad (id, empresa, centro, producto, tipoMovimiento, tipoDestino, destino, origen, bolsas, aplicaOrden, activo, usuarioCreador) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)";
         $aplicaOrden = isset($data['aplicaOrden']) ? $data['aplicaOrden'] : 0;
-        
-        // Validación de datos mínimos
-        if (empty($data['empresa']) || empty($data['centro']) || empty($data['producto']) || empty($data['tipoMovimiento']) || empty($data['tipoOrigen']) || empty($data['origen']) || empty($data['bolsas'])) {
-            error_log('Faltan datos obligatorios para guardar.');
+
+        error_log('OJO: Datos recibidos: ' . print_r($data, true));
+
+        // Validación condicional de datos mínimos
+        if (empty($data['empresa']) || empty($data['centro']) || empty($data['producto']) || empty($data['tipoMovimiento']) || empty($data['bolsas'])) {
+            error_log('OJO: Faltan datos obligatorios para guardar.');
             return false;
         }
+        // Validación condicional para campos según tipoMovimiento
+        if ($data['tipoMovimiento'] === 'DESPACHO') {
+            if (empty($data['tipoDestino']) || empty($data['destino'])) {
+                error_log('OJO: Faltan datos de destino para DESPACHO.');
+                return false;
+            }
+        } else if ($data['tipoMovimiento'] === 'RECEPCIÓN') {
+            if (empty($data['origen'])) {
+                error_log('OJO: Faltan datos de origen para RECEPCIÓN.');
+                return false;
+            }
+            // Para recepción, tipoDestino y destino pueden ir vacíos
+            $data['tipoDestino'] = null;
+            $data['destino'] = null;
+        }
+        $usuarioCreador = 'B78A8160-A9F4-4DFA-B83D-061E597F54A9'; // Usuario estático GUID
         $params = array(
             $idBolsasCalidad,
             $data['empresa'],
             $data['centro'],
             $data['producto'],
             $data['tipoMovimiento'],
-            $data['tipoOrigen'],
+            $data['tipoDestino'],
+            $data['destino'],
             $data['origen'],
             $data['bolsas'],
-            $aplicaOrden
+            $aplicaOrden,
+            $usuarioCreador
         );
-        $stmt = sqlsrv_query($conn, $sql, $params);
-        if ($stmt === false) {
-            error_log('Error al guardar BolsasCalidad: ' . print_r(sqlsrv_errors(), true));
+
+        error_log('OJO: Params para INSERT BolsasCalidad: ' . print_r($params, true));
+
+        // Iniciar transacción
+        if (!sqlsrv_begin_transaction($conn)) {
+            error_log('OJO: No se pudo iniciar la transacción: ' . print_r(sqlsrv_errors(), true));
             return false;
         }
 
-        if (empty($data['detalles'])) {
-            error_log('No se recibieron detalles para guardar.');
+        $todoOk = true;
+        $stmt = sqlsrv_query($conn, $sql, $params);
+        if ($stmt === false) {
+            error_log('OJO: Error al guardar BolsasCalidad: ' . print_r(sqlsrv_errors(), true));
+            $todoOk = false;
+        } else {
+            error_log('OJO: Insert BolsasCalidad OK');
         }
 
-        foreach ($data['detalles'] as $detalle) {
-            try {
+        if ($todoOk && !empty($data['detalles'])) {
+            error_log('OJO: Iniciando guardado de detalles');
+            foreach ($data['detalles'] as $detalle) {
                 $sqlDet = "INSERT INTO BolsasCalidadDetalle (idBolsasCalidad, numeroBolsa, viajes, idTipoAnalisis) VALUES (?, ?, ?, ?)";
                 $paramsDet = array(
                     $idBolsasCalidad,
@@ -108,36 +141,68 @@ class BolsasModel {
                     $detalle['viajes'] ?? null,
                     $detalle['idTipoAnalisis'] ?? null
                 );
+                error_log('OJO: Params detalle: ' . print_r($paramsDet, true));
                 $stmtDet = sqlsrv_query($conn, $sqlDet, $paramsDet);
                 if ($stmtDet === false) {
-                    error_log('Error al guardar detalle: ' . print_r(sqlsrv_errors(), true));
+                    error_log('OJO: Error al guardar detalle: ' . print_r(sqlsrv_errors(), true));
+                    $todoOk = false;
+                    break;
+                } else {
+                    error_log('OJO: Insert detalle OK');
                 }
-            } catch (Exception $e) {
-                error_log('Error al guardar detalle: ' . $e->getMessage());
             }
+        } else if ($todoOk && empty($data['detalles'])) {
+            error_log('OJO: No se recibieron detalles para guardar.');
         }
-        return $idBolsasCalidad;
+
+        if ($todoOk) {
+            error_log('OJO: Commit de la transacción');
+            sqlsrv_commit($conn);
+            return $idBolsasCalidad;
+        } else {
+            error_log('OJO: Rollback de la transacción');
+            sqlsrv_rollback($conn);
+            return false;
+        }
     }
 
     public function actualizarDatos($id, $data) {
         global $conn;
-        $sql = "UPDATE BolsasCalidad SET empresa=?, centro=?, producto=?, tipoMovimiento=?, tipoOrigen=?, origen=?, bolsas=?, aplicaOrden=? WHERE id=?";
+        $sql = "UPDATE BolsasCalidad SET empresa=?, centro=?, producto=?, tipoMovimiento=?, tipoDestino=?, destino=?, origen=?, bolsas=?, aplicaOrden=?, usuarioCreador=? WHERE id=?";
         $aplicaOrden = isset($data['aplicaOrden']) ? $data['aplicaOrden'] : 0;
         
-        // Validación de datos mínimos
-        if (empty($data['empresa']) || empty($data['centro']) || empty($data['producto']) || empty($data['tipoMovimiento']) || empty($data['tipoOrigen']) || empty($data['origen']) || empty($data['bolsas'])) {
+        // Validación condicional de datos mínimos
+        if (empty($data['empresa']) || empty($data['centro']) || empty($data['producto']) || empty($data['tipoMovimiento']) || empty($data['bolsas'])) {
             error_log('Faltan datos obligatorios para actualizar.');
             return false;
         }
+        // Validación condicional para campos según tipoMovimiento
+        if ($data['tipoMovimiento'] === 'DESPACHO') {
+            if (empty($data['tipoDestino']) || empty($data['destino'])) {
+                error_log('Faltan datos de destino para DESPACHO.');
+                return false;
+            }
+        } else if ($data['tipoMovimiento'] === 'RECEPCIÓN') {
+            if (empty($data['origen'])) {
+                error_log('Faltan datos de origen para RECEPCIÓN.');
+                return false;
+            }
+            // Para recepción, tipoDestino y destino pueden ir vacíos
+            $data['tipoDestino'] = null;
+            $data['destino'] = null;
+        }
+        $usuarioCreador = 'B78A8160-A9F4-4DFA-B83D-061E597F54A9'; // Usuario estático GUID
         $params = array(
             $data['empresa'],
             $data['centro'],
             $data['producto'],
             $data['tipoMovimiento'],
-            $data['tipoOrigen'],
+            $data['tipoDestino'],
+            $data['destino'],
             $data['origen'],
             $data['bolsas'],
             $aplicaOrden,
+            $usuarioCreador,
             $id
         );
         $stmt = sqlsrv_query($conn, $sql, $params);

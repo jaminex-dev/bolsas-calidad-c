@@ -52,8 +52,15 @@
                 </div>
                 <!-- Tipo Origen -->
                 <div class="form-group">
-                    <label for="tipoOrigen"><i class="fa-solid fa-location-dot select-icon"></i>Tipo Origen</label>
-                    <select class="form-control custom-select" id="tipoOrigen" required>
+                    <label for="tipoDestino"><i class="fa-solid fa-location-dot select-icon"></i>Tipo Destino</label>
+                    <select class="form-control custom-select" id="tipoDestino" required>
+                        <option value="">Seleccione...</option>
+                    </select>
+                </div>
+                <!-- Destino -->
+                <div class="form-group">
+                    <label for="destino"><i class="fa-solid fa-map-pin select-icon"></i>Destino</label>
+                    <select class="form-control custom-select" id="destino" required>
                         <option value="">Seleccione...</option>
                     </select>
                 </div>
