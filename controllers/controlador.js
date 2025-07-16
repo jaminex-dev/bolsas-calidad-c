@@ -167,12 +167,11 @@ function recargarTablaConfiguraciones() {
                 window.ultimaRespuestaBolsas = res.data; 
                 tablaConfiguraciones.clear();
                 res.data.forEach(function(item) {
-                    // Usar los campos destinoNombre y origenNombre que ya vienen del backend
                     let destinoNombre = (item.destinoNombre && item.destinoNombre !== '' && item.destinoNombre !== null) ? item.destinoNombre : '-';
                     let origenNombre = (item.origenNombre && item.origenNombre !== '' && item.origenNombre !== null) ? item.origenNombre : '-';
                     tablaConfiguraciones.row.add([
                         item.empresaNombre || item.empresa || '-',
-                        item.centroDespacho || item.centro || '-',
+                        item.centroDespachoNombre || item.centro || '-',
                         item.productoNombre || item.producto || '-',
                         item.tipoMovimiento || '-',
                         item.tipoDestinoNombre || item.tipoDestino || '-',
@@ -183,7 +182,8 @@ function recargarTablaConfiguraciones() {
                         (item.detalles && item.detalles.length > 0 ? item.detalles.map(d => d.tipoAnalisisNombre || d.idTipoAnalisis).join(', ') : '-'),
                         Number(item.aplicaOrden) === 1 ? 'SI APLICA ORDEN EN PUERTO' : 'NO APLICA ORDEN EN PUERTO',
                         `<button class='btn btn-sm btn-primary btn-editar'><i class='fa fa-edit'></i></button> <button class='btn btn-sm btn-danger btn-eliminar'><i class='fa fa-trash'></i></button>`,
-                        item.id || ''
+                        item.id || '',
+                        JSON.stringify(item) // Guardar el objeto completo para edición
                     ]);
                 });
                 tablaConfiguraciones.draw();
@@ -770,7 +770,7 @@ $(document).ready(function() {
     $(document).on('click', '.btn-eliminar', function(){
         let row = $(this).closest('tr');
         let data = tablaConfiguraciones.row(row).data();
-        let id = data[10]; 
+        let id = data[12] || data[11]; // ID ahora está en la última columna oculta
         Swal.fire({
             title: '¿Está seguro de eliminar esta configuración?',
             icon: 'warning',
@@ -800,6 +800,34 @@ $(document).ready(function() {
             } else if (result.dismiss === Swal.DismissReason.cancel) {
                 mostrarAlerta('Eliminación cancelada.', 'info');
             }
+        });
+    });
+
+    // Editar registro
+    $(document).on('click', '.btn-editar', function(){
+        let row = $(this).closest('tr');
+        let data = tablaConfiguraciones.row(row).data();
+        let id = data[12] || data[11];
+        let item = {};
+        try {
+            item = JSON.parse(data[13]);
+        } catch(e) {
+            mostrarAlerta('No se pudo obtener los datos para editar.', 'danger');
+            return;
+        }
+        // Generar y mostrar el formulario de edición
+        let formHtml = generarFormEditarUnificado(item);
+        if($('#modalEditar').length === 0) {
+            $('body').append(`<div class="modal fade" id="modalEditar" tabindex="-1" role="dialog"><div class="modal-dialog modal-lg" role="document"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Editar Configuración</h5><button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button></div><div class="modal-body"></div></div></div></div>`);
+        }
+        $('#modalEditar .modal-body').html(formHtml);
+        $('#modalEditar').modal('show');
+        // Aquí puedes agregar lógica para cargar selects y valores si es necesario
+        // ...
+        // Guardar cambios (puedes adaptar el submit del formulario aquí)
+        $('#formEditar').off('submit').on('submit', function(e){
+            e.preventDefault();
+            // ... lógica de guardado ...
         });
     });
 

@@ -31,25 +31,26 @@ class BolsasModel {
         // Procesar los datos de las bolsas
         foreach ($bolsas as &$bolsa) {
             $bolsa['empresaNombre'] = $empresaMap[$bolsa['empresa']] ?? $bolsa['empresa'];
-            $bolsa['centroDespacho'] = $centroMap[$bolsa['centro']] ?? $bolsa['centro'];
-            $bolsa['productoNombre'] = $productoMap[$bolsa['producto']] ?? $bolsa['producto'];            
+            $bolsa['centroDespachoNombre'] = $centroMap[$bolsa['centro']] ?? $bolsa['centro'];
+            $bolsa['productoNombre'] = $productoMap[$bolsa['producto']] ?? $bolsa['producto'];
             $bolsa['tipoDestinoNombre'] = $tipoDestinoMap[$bolsa['tipoDestino']] ?? $bolsa['tipoDestino'];
             $bolsa['destinoNombre'] = $destinoMap[$bolsa['destino']] ?? ($bolsa['destino'] ?? '');
             $bolsa['origenNombre'] = $destinoMap[$bolsa['origen']] ?? $bolsa['origen'];
-            $sqlDet = "SELECT d.numeroBolsa, d.viajes, d.idTipoAnalisis FROM BolsasCalidadDetalle d WHERE d.idBolsasCalidad = ?";
-            $params = array($bolsa['id']);
-            $stmtDet = sqlsrv_query($conn, $sqlDet, $params);
+            // Detalles de bolsas
+            $sqlDet = "SELECT d.numeroBolsa, d.viajes, d.idTipoAnalisis FROM BolsasCalidadDetalle d WHERE d.idBolsasCalidad = ? ORDER BY d.numeroBolsa ASC";
+            $paramsDet = array($bolsa['id']);
+            $stmtDet = sqlsrv_query($conn, $sqlDet, $paramsDet);
             $detalles = [];
-            if ($stmtDet === false) {
-            } else {
+            if ($stmtDet !== false) {
                 while ($detRow = sqlsrv_fetch_array($stmtDet, SQLSRV_FETCH_ASSOC)) {
+                    $detRow['tipoAnalisisNombre'] = $tipoAnalisisMap[$detRow['idTipoAnalisis']] ?? $detRow['idTipoAnalisis'];
                     $detalles[] = $detRow;
                 }
             }
             $bolsa['detalles'] = $detalles;
-            foreach ($bolsa['detalles'] as &$det) {
-                $det['tipoAnalisisNombre'] = $tipoAnalisisMap[$det['idTipoAnalisis']] ?? $det['idTipoAnalisis'];
-            }
+            // Para facilitar el frontend, agregar campos planos para viajes y análisis
+            $bolsa['viajes'] = implode(',', array_column($detalles, 'viajes'));
+            $bolsa['analisis'] = implode(',', array_column($detalles, 'idTipoAnalisis'));
         }
         return $bolsas;
     }
