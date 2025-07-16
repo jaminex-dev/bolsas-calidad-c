@@ -22,7 +22,6 @@ class BolsasModel {
         $stmt = sqlsrv_query($conn, $sql);
         $bolsas = [];
         if ($stmt === false) {
-            error_log('Error en consulta principal: ' . print_r(sqlsrv_errors(), true));
             return [];
         }
         while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
@@ -42,7 +41,6 @@ class BolsasModel {
             $stmtDet = sqlsrv_query($conn, $sqlDet, $params);
             $detalles = [];
             if ($stmtDet === false) {
-                error_log('Error en consulta de detalles: ' . print_r(sqlsrv_errors(), true));
             } else {
                 while ($detRow = sqlsrv_fetch_array($stmtDet, SQLSRV_FETCH_ASSOC)) {
                     $detalles[] = $detRow;
@@ -70,29 +68,22 @@ class BolsasModel {
     }
 
     public function guardarDatos($data) {
-        error_log('OJO: Iniciando guardarDatos');
         global $conn;
         $idBolsasCalidad = $this->generateGuid();
-        error_log('OJO: GUID generado: ' . $idBolsasCalidad);
         $sql = "INSERT INTO BolsasCalidad (id, empresa, centro, producto, tipoMovimiento, tipoDestino, destino, origen, bolsas, aplicaOrden, activo, usuarioCreador) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)";
         $aplicaOrden = isset($data['aplicaOrden']) ? $data['aplicaOrden'] : 0;
 
-        error_log('OJO: Datos recibidos: ' . print_r($data, true));
-
         // Validación condicional de datos mínimos
         if (empty($data['empresa']) || empty($data['centro']) || empty($data['producto']) || empty($data['tipoMovimiento']) || empty($data['bolsas'])) {
-            error_log('OJO: Faltan datos obligatorios para guardar.');
             return false;
         }
         // Validación condicional para campos según tipoMovimiento
         if ($data['tipoMovimiento'] === 'DESPACHO') {
             if (empty($data['tipoDestino']) || empty($data['destino'])) {
-                error_log('OJO: Faltan datos de destino para DESPACHO.');
                 return false;
             }
         } else if ($data['tipoMovimiento'] === 'RECEPCIÓN') {
             if (empty($data['origen'])) {
-                error_log('OJO: Faltan datos de origen para RECEPCIÓN.');
                 return false;
             }
             // Para recepción, tipoDestino y destino pueden ir vacíos
@@ -114,25 +105,19 @@ class BolsasModel {
             $usuarioCreador
         );
 
-        error_log('OJO: Params para INSERT BolsasCalidad: ' . print_r($params, true));
-
         // Iniciar transacción
         if (!sqlsrv_begin_transaction($conn)) {
-            error_log('OJO: No se pudo iniciar la transacción: ' . print_r(sqlsrv_errors(), true));
             return false;
         }
 
         $todoOk = true;
         $stmt = sqlsrv_query($conn, $sql, $params);
         if ($stmt === false) {
-            error_log('OJO: Error al guardar BolsasCalidad: ' . print_r(sqlsrv_errors(), true));
             $todoOk = false;
         } else {
-            error_log('OJO: Insert BolsasCalidad OK');
         }
 
         if ($todoOk && !empty($data['detalles'])) {
-            error_log('OJO: Iniciando guardado de detalles');
             foreach ($data['detalles'] as $detalle) {
                 $sqlDet = "INSERT INTO BolsasCalidadDetalle (idBolsasCalidad, numeroBolsa, viajes, idTipoAnalisis) VALUES (?, ?, ?, ?)";
                 $paramsDet = array(
@@ -141,26 +126,20 @@ class BolsasModel {
                     $detalle['viajes'] ?? null,
                     $detalle['idTipoAnalisis'] ?? null
                 );
-                error_log('OJO: Params detalle: ' . print_r($paramsDet, true));
                 $stmtDet = sqlsrv_query($conn, $sqlDet, $paramsDet);
                 if ($stmtDet === false) {
-                    error_log('OJO: Error al guardar detalle: ' . print_r(sqlsrv_errors(), true));
                     $todoOk = false;
                     break;
                 } else {
-                    error_log('OJO: Insert detalle OK');
                 }
             }
         } else if ($todoOk && empty($data['detalles'])) {
-            error_log('OJO: No se recibieron detalles para guardar.');
         }
 
         if ($todoOk) {
-            error_log('OJO: Commit de la transacción');
             sqlsrv_commit($conn);
             return $idBolsasCalidad;
         } else {
-            error_log('OJO: Rollback de la transacción');
             sqlsrv_rollback($conn);
             return false;
         }
@@ -173,18 +152,15 @@ class BolsasModel {
         
         // Validación condicional de datos mínimos
         if (empty($data['empresa']) || empty($data['centro']) || empty($data['producto']) || empty($data['tipoMovimiento']) || empty($data['bolsas'])) {
-            error_log('Faltan datos obligatorios para actualizar.');
             return false;
         }
         // Validación condicional para campos según tipoMovimiento
         if ($data['tipoMovimiento'] === 'DESPACHO') {
             if (empty($data['tipoDestino']) || empty($data['destino'])) {
-                error_log('Faltan datos de destino para DESPACHO.');
                 return false;
             }
         } else if ($data['tipoMovimiento'] === 'RECEPCIÓN') {
             if (empty($data['origen'])) {
-                error_log('Faltan datos de origen para RECEPCIÓN.');
                 return false;
             }
             // Para recepción, tipoDestino y destino pueden ir vacíos
@@ -207,7 +183,6 @@ class BolsasModel {
         );
         $stmt = sqlsrv_query($conn, $sql, $params);
         if ($stmt === false) {
-            error_log('Error al actualizar BolsasCalidad: ' . print_r(sqlsrv_errors(), true));
             return false;
         }
 
@@ -216,7 +191,6 @@ class BolsasModel {
             $paramsDel = array($id);
             $stmtDel = sqlsrv_query($conn, $sqlDel, $paramsDel);
             if ($stmtDel === false) {
-                error_log('Error al eliminar detalles previos: ' . print_r(sqlsrv_errors(), true));
             }
             foreach ($data['detalles'] as $detalle) {
                 $sqlDet = "INSERT INTO BolsasCalidadDetalle (idBolsasCalidad, numeroBolsa, viajes, idTipoAnalisis) VALUES (?, ?, ?, ?)";
@@ -228,7 +202,6 @@ class BolsasModel {
                 );
                 $stmtDet = sqlsrv_query($conn, $sqlDet, $paramsDet);
                 if ($stmtDet === false) {
-                    error_log('Error al guardar detalle (actualizar): ' . print_r(sqlsrv_errors(), true));
                 }
             }
         }
@@ -241,7 +214,6 @@ class BolsasModel {
         $params = array($id);
         $stmt = sqlsrv_query($conn, $sql, $params);
         if ($stmt === false) {
-            error_log('Error al eliminar registro: ' . print_r(sqlsrv_errors(), true));
             return false;
         }
         return true;
