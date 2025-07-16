@@ -167,15 +167,20 @@ function recargarTablaConfiguraciones() {
                 window.ultimaRespuestaBolsas = res.data; 
                 tablaConfiguraciones.clear();
                 res.data.forEach(function(item) {
+                    // Usar los campos destinoNombre y origenNombre que ya vienen del backend
+                    let destinoNombre = (item.destinoNombre && item.destinoNombre !== '' && item.destinoNombre !== null) ? item.destinoNombre : '-';
+                    let origenNombre = (item.origenNombre && item.origenNombre !== '' && item.origenNombre !== null) ? item.origenNombre : '-';
                     tablaConfiguraciones.row.add([
-                        item.empresaNombre || item.empresa || '',
-                        item.centroDespacho || item.centro || '',
-                        item.productoNombre || item.producto || '',
-                        item.tipoMovimiento || '',
-                        item.tipoDestinoNombre || item.tipoDestino || '',
-                        item.bolsas || '',
-                        (item.detalles ? item.detalles.map(d => d.viajes).join(', ') : ''),
-                        (item.detalles ? item.detalles.map(d => d.tipoAnalisisNombre || d.idTipoAnalisis).join(', ') : ''),
+                        item.empresaNombre || item.empresa || '-',
+                        item.centroDespacho || item.centro || '-',
+                        item.productoNombre || item.producto || '-',
+                        item.tipoMovimiento || '-',
+                        item.tipoDestinoNombre || item.tipoDestino || '-',
+                        destinoNombre,
+                        origenNombre,
+                        item.bolsas || '-',
+                        (item.detalles && item.detalles.length > 0 ? item.detalles.map(d => d.viajes).join(', ') : '-'),
+                        (item.detalles && item.detalles.length > 0 ? item.detalles.map(d => d.tipoAnalisisNombre || d.idTipoAnalisis).join(', ') : '-'),
                         Number(item.aplicaOrden) === 1 ? 'SI APLICA ORDEN EN PUERTO' : 'NO APLICA ORDEN EN PUERTO',
                         `<button class='btn btn-sm btn-primary btn-editar'><i class='fa fa-edit'></i></button> <button class='btn btn-sm btn-danger btn-eliminar'><i class='fa fa-trash'></i></button>`,
                         item.id || ''
@@ -245,6 +250,8 @@ $(document).ready(function() {
             { title: 'Producto' },
             { title: 'Movimiento' },
             { title: 'Tipo Destino' },
+            { title: 'Destino' },
+            { title: 'Origen' },
             { title: 'Bolsas' },
             { title: 'Viajes' },
             { title: 'Análisis' },
@@ -270,7 +277,7 @@ $(document).ready(function() {
                 }
             },
             {
-                targets: [10], // Columna ID oculta
+                targets: [12], // Columna ID oculta
                 visible: false,
                 searchable: false
             }
@@ -620,6 +627,36 @@ $(document).ready(function() {
             $('#editTipoDestino').val(item.tipoDestino);
             $('#editDestino').val(item.destino);
             $('#editOrigenes').val(item.origen);
+            // Lógica condicional para mostrar/ocultar campos según Tipo Movimiento en el modal editar
+            function actualizarCamposPorMovimientoEditar() {
+                const tipoMovimiento = $('#editMovimiento').val();
+                if (tipoMovimiento === 'DESPACHO') {
+                    // Mostrar y requerir destino y tipoDestino, ocultar y limpiar origenes
+                    $('#editTipoDestino').closest('.form-group').show().find('select').prop('required', true);
+                    $('#editDestino').closest('.form-group').show().find('select').prop('required', true);
+                    $('#editOrigenes').closest('.form-group').hide().find('select').prop('required', false).val('');
+                } else if (tipoMovimiento === 'RECEPCIÓN') {
+                    // Mostrar y requerir origenes, ocultar y limpiar destino y tipoDestino
+                    $('#editTipoDestino').closest('.form-group').hide().find('select').prop('required', false).val('');
+                    $('#editDestino').closest('.form-group').hide().find('select').prop('required', false).val('');
+                    $('#editOrigenes').closest('.form-group').show().find('select').prop('required', true);
+                } else {
+                    // Si no hay selección, ocultar todos y limpiar
+                    $('#editTipoDestino').closest('.form-group').hide().find('select').prop('required', false).val('');
+                    $('#editDestino').closest('.form-group').hide().find('select').prop('required', false).val('');
+                    $('#editOrigenes').closest('.form-group').hide().find('select').prop('required', false).val('');
+                }
+            }
+            // Inicializar visibilidad al cargar el modal
+            actualizarCamposPorMovimientoEditar();
+            // Evento cambio de tipoMovimiento en el modal editar
+            $('#editMovimiento').on('change', function() {
+                actualizarCamposPorMovimientoEditar();
+                // Limpiar selects relacionados al cambiar tipo de movimiento
+                $('#editTipoDestino').val('');
+                $('#editDestino').val('');
+                $('#editOrigenes').val('');
+            });
             $('#modalEditar').modal('show');
         });
         // Actualizar tarjetas al cambiar bolsas (edición)

@@ -36,7 +36,7 @@ class BolsasModel {
             $bolsa['productoNombre'] = $productoMap[$bolsa['producto']] ?? $bolsa['producto'];            
             $bolsa['tipoDestinoNombre'] = $tipoDestinoMap[$bolsa['tipoDestino']] ?? $bolsa['tipoDestino'];
             $bolsa['destinoNombre'] = $destinoMap[$bolsa['destino']] ?? ($bolsa['destino'] ?? '');
-            $bolsa['origenNombre'] = $tipoDestinoMap[$bolsa['origen']] ?? $bolsa['origen'];
+            $bolsa['origenNombre'] = $destinoMap[$bolsa['origen']] ?? $bolsa['origen'];
             $sqlDet = "SELECT d.numeroBolsa, d.viajes, d.idTipoAnalisis FROM BolsasCalidadDetalle d WHERE d.idBolsasCalidad = ?";
             $params = array($bolsa['id']);
             $stmtDet = sqlsrv_query($conn, $sqlDet, $params);

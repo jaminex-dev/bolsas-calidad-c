@@ -105,10 +105,12 @@
     <thead>
         <tr>
             <th>Empresa</th>
-            <th>Centro</th>
+            <th>Centro Despacho</th>
             <th>Producto</th>
             <th>Movimiento</th>
-            <th>Tipo Origen</th>
+            <th>Tipo Destino</th>
+            <th>Destino</th>
+            <th>Origen</th>
             <th>Bolsas</th>
             <th>Viajes</th>
             <th>Análisis</th>
