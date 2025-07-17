@@ -1,3 +1,4 @@
+// Controlador para la gestión de bolsas de calidad
 $('#tipoDestino').on('change', function() {
         var idClase = $(this).val();
         var $destino = $('#destino');
@@ -117,7 +118,6 @@ function generarFormEditarUnificado(obj) {
     let tipoDestinoOptions = $('#tipoDestino').html();
     let destinoOptions = $('#destino').html();
     let origenesOptions = $('#origenes').html();
-    // Generar tarjetas y separar bloques
     let tarjetasHtml = generarTarjetas(numBolsas, viajesArr, analisisArr, 'editar');
     let tempDiv = $('<div>' + tarjetasHtml + '</div>');
     let viajesHtml = tempDiv.children().eq(0).prop('outerHTML');
@@ -211,7 +211,7 @@ function recargarTablaConfiguraciones() {
                         Number(item.aplicaOrden) === 1 ? 'SI APLICA ORDEN EN PUERTO' : 'NO APLICA ORDEN EN PUERTO',
                         `<button class='btn btn-sm btn-primary btn-editar'><i class='fa fa-edit'></i></button> <button class='btn btn-sm btn-danger btn-eliminar'><i class='fa fa-trash'></i></button>`,
                         item.id || '',
-                        JSON.stringify(item) // Guardar el objeto completo para edición
+                        JSON.stringify(item) 
                     ]);
                 });
                 tablaConfiguraciones.draw();
@@ -249,10 +249,8 @@ $(document).ready(function() {
     }
     // Inicializar visibilidad al cargar
     actualizarCamposPorMovimiento();
-    // Evento cambio de tipoMovimiento
     $('#tipoMovimiento').on('change', function() {
         actualizarCamposPorMovimiento();
-        // Limpiar selects relacionados al cambiar tipo de movimiento
         $('#tipoDestino').val('');
         $('#destino').val('');
         $('#origenes').val('');
@@ -285,7 +283,7 @@ $(document).ready(function() {
             { title: 'Análisis' },
             { title: 'Orden Puerto' },
             { title: 'Acciones', orderable: false, searchable: false },
-            { title: 'ID', visible: false, searchable: false } // Columna oculta para el ID
+            { title: 'ID', visible: false, searchable: false } 
         ],
         drawCallback: function() {
             setTimeout(function() {
@@ -305,7 +303,7 @@ $(document).ready(function() {
                 }
             },
             {
-                targets: [12], // Columna ID oculta
+                targets: [12], 
                 visible: false,
                 searchable: false
             }
@@ -323,7 +321,6 @@ $(document).ready(function() {
                 if(res.success && Array.isArray(res.data)) {
                     window.ultimaRespuestaBolsas = res.data; 
                     tablaConfiguraciones.clear();
-                    // Separar y ordenar: primero los del tipo seleccionado, luego los del otro tipo
                     let primero = [], segundo = [];
                     if (tipoMovimiento) {
                         res.data.forEach(function(item) {
@@ -395,13 +392,11 @@ $(document).ready(function() {
             labelField = 'Descripcion';
             valueField = 'idDestino';
         } else if(selector === '#destino') {
-            // Se cargará dinámicamente según el tipo destino seleccionado
             var idClase = $('#tipoDestino').val();
             url = '../servicios/api-bolsa-calidad/api.php/destino' + (idClase ? ('?idClase=' + encodeURIComponent(idClase)) : '');
             labelField = 'Descripcion';
             valueField = 'idDestino';
         } else {
-            // Por compatibilidad, si hay otros selects, puedes ajustar aquí
             url = '../servicios/api-bolsa-calidad/api.php/centrodespacho';
             labelField = 'Descripcion';
             valueField = 'idDestino';
@@ -479,12 +474,11 @@ $(document).ready(function() {
             }
         });
     }
-
+    // Cargar selects al iniciar
     cargarProveedoresSelect('#empresa');
     cargarProveedoresSelect('#centroDespacho');
     cargarProveedoresSelect('#tipoDestino');
     cargarProveedoresSelect('#origenes');
-    // No cargar destino aquí, se cargará dinámicamente según tipoDestino
     cargarProductosSelect('#producto');
     cargarTiposAnalisisSelect('#tipoAnalisis');
 
@@ -493,10 +487,12 @@ $(document).ready(function() {
     cargarProveedoresSelect('#centroDespacho');
     cargarProveedoresSelect('#tipoDestino');
     cargarProveedoresSelect('#origenes');
+
     // No cargar destino aquí, se cargará dinámicamente según tipoDestino
     $('#destino').empty().append('<option value="">Seleccione...</option>').prop('disabled', true);
     cargarProductosSelect('#producto');
     cargarTiposAnalisisSelect('#tipoAnalisis');
+
     // Evento cambio bolsas (crear)
     $('#bolsasCalidad').on('input change', function() {
         let self = this;
@@ -690,7 +686,7 @@ $(document).ready(function() {
             }),
             success: function(res) {
                 mostrarAlerta('¡Configuración guardada en base de datos!', 'success');
-                recargarTablaConfiguraciones(); // <--- Recargar tabla tras guardar
+                recargarTablaConfiguraciones(); 
                 // Llamar al handler del botón limpiar para limpiar y ocultar los campos
                 $('#btnLimpiar').trigger('click');
             },
@@ -698,8 +694,6 @@ $(document).ready(function() {
                 mostrarAlerta('Error al guardar: ' + xhr.responseText, 'danger');
             }
         });
-        // Limpiar formulario
-        // ...el reseteo y ocultamiento ya se realiza en success, no repetir aquí...
     });
 
     // Botón Limpiar
@@ -712,7 +706,7 @@ $(document).ready(function() {
         mostrarAlerta('Formulario limpiado', 'info');
     });
 
-    // Editar registro (unificada y funcional)
+    // Editar registro 
     $(document).on('click', '.btn-editar', function(){
         let row = $(this).closest('tr');
         let data = tablaConfiguraciones.row(row).data();
@@ -861,7 +855,7 @@ $(document).ready(function() {
                 $('#formEditar').submit();
             });
 
-            // Guardar cambios (submit unificado y funcional)
+            // Guardar cambios 
             $('#formEditar').off('submit').on('submit', function(e){
                 e.preventDefault();
                 let valid = true;
@@ -906,7 +900,7 @@ $(document).ready(function() {
                     detalles[i].viajes = editViajes[i];
                     detalles[i].idTipoAnalisis = editAnalisis[i];
                 }
-                // Obtener valores del formulario (idéntico a la lógica de creación)
+                // Obtener valores del formulario 
                 const empresa = $('#editEmpresa').val();
                 const centro = $('#editCentro').val();
                 const producto = $('#editProducto').val();
@@ -956,7 +950,7 @@ $(document).ready(function() {
     $(document).on('click', '.btn-eliminar', function(){
         let row = $(this).closest('tr');
         let data = tablaConfiguraciones.row(row).data();
-        let id = data[12] || data[11]; // ID ahora está en la última columna oculta
+        let id = data[12] || data[11]; 
         Swal.fire({
             title: '¿Está seguro de eliminar esta configuración?',
             icon: 'warning',
@@ -988,8 +982,6 @@ $(document).ready(function() {
             }
         });
     });
-
-    // ...la versión unificada y funcional de edición ya está implementada arriba...
 
     // Buscador fuera del DataTable
     $('#buscadorConfiguraciones').on('keyup', function() {
