@@ -48,13 +48,12 @@ class BolsasModel {
                 }
             }
             $bolsa['detalles'] = $detalles;
-            // Para facilitar el frontend, agregar campos planos para viajes y análisis
             $bolsa['viajes'] = implode(',', array_column($detalles, 'viajes'));
             $bolsa['analisis'] = implode(',', array_column($detalles, 'idTipoAnalisis'));
         }
         return $bolsas;
     }
-
+    // Obtiene un mapeo de nombres para una tabla específica
     private function getNombres($tabla, $campoId, $campoNombre) {
         global $conn;
         $sql  = "SELECT DISTINCT $campoId, $campoNombre FROM $tabla WHERE $campoNombre IS NOT NULL AND $campoNombre <> ''";
@@ -67,7 +66,7 @@ class BolsasModel {
         }
         return $map;
     }
-
+    // Guarda los datos de una nueva bolsa de calidad
     public function guardarDatos($data) {
         global $conn;
         $idBolsasCalidad = $this->generateGuid();
@@ -208,7 +207,7 @@ class BolsasModel {
         }
         return true;
     }
-
+    // Elimina lógicamente los datos de una bolsa
     public function eliminarDatos($id) {
         global $conn;
         $sql = "UPDATE BolsasCalidad SET activo = 0 WHERE id = ?";
@@ -220,7 +219,7 @@ class BolsasModel {
         return true;
     }
 
-
+    // Genera un GUID único
     private function generateGuid() {
         if (function_exists('com_create_guid')) {
             return trim(com_create_guid(), '{}');

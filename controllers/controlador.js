@@ -1,4 +1,4 @@
-    $('#tipoDestino').on('change', function() {
+$('#tipoDestino').on('change', function() {
         var idClase = $(this).val();
         if (idClase) {
             // Llamar directamente al endpoint destino filtrando por idClase
@@ -24,37 +24,6 @@
             $('#destino').empty().append('<option value="">Seleccione...</option>');
         }
     });
-// Recargar destino cuando cambie tipo destino
-$('#tipoDestino').on('change', function() {
-    var idClase = $(this).val();
-    var $destino = $('#destino');
-    $destino.empty().append('<option value="">Seleccione...</option>').prop('disabled', true);
-    if (idClase) {
-        // Llamar directamente al endpoint destino filtrando por idClase
-        $.ajax({
-            url: '../servicios/api-bolsa-calidad/api.php/destino?idClase=' + encodeURIComponent(idClase),
-            method: 'GET',
-            dataType: 'json',
-            success: function(res) {
-                $destino.empty();
-                $destino.append('<option value="">Seleccione...</option>');
-                if(res.success && Array.isArray(res.data) && res.data.length > 0) {
-                    res.data.forEach(function(item) {
-                        $destino.append('<option value="'+item.idDestino+'">'+(item.Descripcion || '-')+'</option>');
-                    });
-                    $destino.prop('disabled', false);
-                } else {
-                    $destino.prop('disabled', true);
-                }
-            },
-            error: function(xhr) {
-                $destino.empty().append('<option value="">Seleccione...</option>').prop('disabled', true);
-            }
-        });
-    } else {
-        $destino.empty().append('<option value="">Seleccione...</option>').prop('disabled', true);
-    }
-});
 // Función global para mostrar alertas Bootstrap
 function mostrarAlerta(mensaje, tipo = 'info', tiempo = 3000) {
     let icon = 'info';
@@ -341,8 +310,72 @@ $(document).ready(function() {
         ]
     });
 
-    // --- Recargar tabla de configuraciones ---
-    recargarTablaConfiguraciones();
+
+    // --- Recargar tabla de configuraciones solo si hay tipoMovimiento seleccionado ---
+    function recargarTablaConfiguracionesFiltrado(tipoMovimiento) {
+        $.ajax({
+            url: '../servicios/api-bolsa-calidad/api.php/bolsas',
+            method: 'GET',
+            dataType: 'json',
+            success: function(res) {
+                if(res.success && Array.isArray(res.data)) {
+                    window.ultimaRespuestaBolsas = res.data; 
+                    tablaConfiguraciones.clear();
+                    // Separar y ordenar: primero los del tipo seleccionado, luego los del otro tipo
+                    let primero = [], segundo = [];
+                    if (tipoMovimiento) {
+                        res.data.forEach(function(item) {
+                            if ((item.tipoMovimiento || '').toUpperCase() === tipoMovimiento.toUpperCase()) {
+                                primero.push(item);
+                            } else {
+                                segundo.push(item);
+                            }
+                        });
+                    } else {
+                        primero = res.data;
+                    }
+                    let ordenados = primero.concat(segundo);
+                    ordenados.forEach(function(item) {
+                        let destinoNombre = (item.destinoNombre && item.destinoNombre !== '' && item.destinoNombre !== null) ? item.destinoNombre : '-';
+                        let origenNombre = (item.origenNombre && item.origenNombre !== '' && item.origenNombre !== null) ? item.origenNombre : '-';
+                        tablaConfiguraciones.row.add([
+                            item.empresaNombre || item.empresa || '-',
+                            item.centroDespachoNombre || item.centro || '-',
+                            item.productoNombre || item.producto || '-',
+                            item.tipoMovimiento || '-',
+                            item.tipoDestinoNombre || item.tipoDestino || '-',
+                            destinoNombre,
+                            origenNombre,
+                            item.bolsas || '-',
+                            (item.detalles && item.detalles.length > 0 ? item.detalles.map(d => d.viajes).join(', ') : '-'),
+                            (item.detalles && item.detalles.length > 0 ? item.detalles.map(d => d.tipoAnalisisNombre || d.idTipoAnalisis).join(', ') : '-'),
+                            Number(item.aplicaOrden) === 1 ? 'SI APLICA ORDEN EN PUERTO' : 'NO APLICA ORDEN EN PUERTO',
+                            `<button class='btn btn-sm btn-primary btn-editar'><i class='fa fa-edit'></i></button> <button class='btn btn-sm btn-danger btn-eliminar'><i class='fa fa-trash'></i></button>`,
+                            item.id || '',
+                            JSON.stringify(item)
+                        ]);
+                    });
+                    tablaConfiguraciones.draw();
+                } else {
+                    tablaConfiguraciones.clear().draw();
+                    mostrarAlerta('No hay configuraciones guardadas.', 'info');
+                }
+            },
+            error: function(xhr) {
+                tablaConfiguraciones.clear().draw();
+                mostrarAlerta('Error al cargar configuraciones: ' + xhr.responseText, 'danger');
+            }
+        });
+    }
+
+    // Evento para recargar tabla solo si hay tipoMovimiento seleccionado
+    $('#tipoMovimiento').on('change', function() {
+        const tipoMovimiento = $(this).val();
+        recargarTablaConfiguracionesFiltrado(tipoMovimiento);
+    });
+
+    // Al cargar la página, no mostrar datos hasta que se seleccione tipoMovimiento
+    tablaConfiguraciones.clear().draw();
 
     // Cargar proveedores (RESTful) y clase para tipoDestino
     function cargarProveedoresSelect(selector) {

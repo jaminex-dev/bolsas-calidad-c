@@ -3,7 +3,7 @@
 require_once __DIR__ . '/modelo/BolsasModel.php';
 require_once __DIR__ . '/controlador/BolsasController.php';
 
-
+// Configuración de conexión a la base de datos
 $method = $_SERVER['REQUEST_METHOD'];
 $uri = $_SERVER['REQUEST_URI'];
 $input = json_decode(file_get_contents('php://input'), true);
@@ -13,12 +13,6 @@ header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: X-Requested-With, Content-Type, Origin, Authorization, Accept, Client-Security-Token");
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
 header('Content-Type: application/json');
-
-// Logging para depuración
-error_log("Solicitud recibida: Método=$method, URI=$uri");
-if ($input) {
-    error_log("Datos recibidos: " . json_encode($input));
-}
 
 // Si es una solicitud OPTIONS, respondemos exitosamente (preflight request)
 if ($method === 'OPTIONS') {
@@ -46,10 +40,6 @@ foreach ($patterns as $pattern) {
     }
 }
 
-// Debug de rutas
-error_log("URI completa: " . $uri);
-error_log("Matches encontrados: " . json_encode($matches));
-
 // Si no hay coincidencia, intentamos buscar el recurso de otra manera
 if (!$matched || empty($matches)) {
     $path_parts = explode('/', trim($uri, '/'));
@@ -73,10 +63,6 @@ if (!$matched || empty($matches)) {
 $resource = $matches[1] ?? null;
 $id = $matches[2] ?? null;
 
-// Debug de recursos
-error_log("Resource: " . $resource);
-error_log("ID: " . $id);
-
 $controller = new BolsasController();
 
 switch ($method) {
@@ -85,7 +71,13 @@ switch ($method) {
             if ($id) {
                 $controller->get(['id' => $id]);
             } else {
-                $controller->get();
+                // Si viene tipoMovimiento, filtrar; si no, devolver todos
+                $tipoMovimiento = isset($_GET['tipoMovimiento']) ? $_GET['tipoMovimiento'] : null;
+                if ($tipoMovimiento) {
+                    $controller->get(['tipoMovimiento' => $tipoMovimiento]);
+                } else {
+                    $controller->get();
+                }
             }
         }
         break;
@@ -145,7 +137,7 @@ function executeQuery($sql, $errorMessage = 'Error en consulta SQL') {
 }
 
 // ENDPOINTS 
-// Endpoint para centro despacho (usando tabla Destino)
+// Endpoint para centro despacho
 if ($method === 'GET' && $resource === 'centrodespacho') {
     $sql = "SELECT idDestino, Descripcion, idClase FROM Destino WHERE Descripcion IS NOT NULL AND Descripcion <> '' ORDER BY Descripcion";
     $result = executeQuery($sql, 'Error al obtener centros de despacho');
@@ -179,7 +171,7 @@ if ($method === 'GET' && $resource === 'productos') {
     echo json_encode($result);
     exit;
 }
-// Endpoint para clase (tipo destino)
+// Endpoint para clase
 if ($method === 'GET' && $resource === 'clase') {
     $sql = "SELECT idClase, Descripcion FROM Clase WHERE Descripcion IS NOT NULL AND Descripcion <> '' ORDER BY Descripcion";
     $result = executeQuery($sql, 'Error al obtener clases');
