@@ -49,37 +49,6 @@
 
 
 
-# Instrucciones para implementación de formulario y tabla en Báscula - Bolsas de Calidad
+# Instrucciones para implementación de la tabla(datatable) en Báscula - Bolsas de Calidad
 
-Actúa como desarrollador experto en interfaces web, manejo de formularios condicionales, bases de datos relacionales y renderizado dinámico.
-
-## Paso 1: Cargar Datos de Tablas
-- Consulta y carga en selectores los siguientes datos para el formulario:
-  1. **Empresa:** desde la tabla Proveedores (ya implementado).
-  2. **Centro Despacho:** desde la tabla destino (usa Proveedores, mantener así por ahora).
-  3. **Producto:** desde la tabla Productos (ya implementado).
-  4. **Tipo Destino:** cambiar nombre (antes "tipo origen"), cargar desde la tabla clase (usa Proveedores, mantener así por ahora).
-  5. **Destino:** desde la tabla destino, filtrado por idClase (nuevo campo, crear en formulario y tabla, usar Proveedores por ahora, omitir filtrado).
-  6. **Origen:** desde la tabla orígenes (usa Proveedores, mantener así por ahora).
-- Todos los selectores deben validar que se haya hecho una selección válida antes de enviar el formulario.
-
-## Paso 2: Lógica Condicional en el Formulario
-- El campo **Tipo Movimiento** determina los campos visibles:
-  - Si **Tipo Movimiento = DESPACHO**:
-    - Mostrar campos Tipo Destino y Destino.
-    - Ocultar campo Origen.
-    - Al seleccionar Tipo Destino, cargar Destino asociados por idClase (omitir por ahora).
-  - Si **Tipo Movimiento = RECEPCIÓN**:
-    - Ocultar Tipo Destino y Destino.
-    - Mostrar campo Origen.
-- Los campos visibles deben ser obligatorios.
-
-## Paso 3: Implementar la Tabla Principal
-- Renderizar una tabla con los siguientes encabezados:
-  | Empresa | Centro Despacho | Producto | Movimiento | Tipo Destino | Destino/Origen | Bolsas | Viajes | Análisis | Orden Puerto | Acciones |
-- Si Movimiento = DESPACHO: mostrar Tipo Destino y Destino.
-- Si Movimiento = RECEPCIÓN: mostrar "-" en Tipo Destino y el campo Origen en Destino/Origen.
-- Cada fila debe tener botones de editar (✏️) y eliminar (🗑️).
-
----
-
+1. 

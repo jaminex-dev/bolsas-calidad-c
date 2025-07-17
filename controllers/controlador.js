@@ -815,15 +815,142 @@ $(document).ready(function() {
             mostrarAlerta('No se pudo obtener los datos para editar.', 'danger');
             return;
         }
-        // Generar y mostrar el formulario de edición
-        let formHtml = generarFormEditarUnificado(item);
-        if($('#modalEditar').length === 0) {
-            $('body').append(`<div class="modal fade" id="modalEditar" tabindex="-1" role="dialog"><div class="modal-dialog modal-lg" role="document"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Editar Configuración</h5><button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button></div><div class="modal-body"></div></div></div></div>`);
+        // Esperar a que los tipos de análisis estén cargados antes de generar el formulario y las tarjetas
+        cargarTiposAnalisisGlobal(function() {
+            let formHtml = generarFormEditarUnificado(item);
+            if($('#modalEditar').length === 0) {
+                $('body').append(`<div class="modal fade" id="modalEditar" tabindex="-1" role="dialog"><div class="modal-dialog modal-lg" role="document"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Editar Configuración</h5><button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button></div><div class="modal-body"></div></div></div></div>`);
+            }
+            $('#modalEditar .modal-body').html(formHtml);
+
+            // Setear valores en selects y campos solo si existen y no son nulos/vacíos
+            if(item.empresa) $('#editEmpresa').val(item.empresa); else $('#editEmpresa').val('');
+            if(item.centro) $('#editCentro').val(item.centro); else $('#editCentro').val('');
+            if(item.producto) $('#editProducto').val(item.producto); else $('#editProducto').val('');
+            if(item.tipoMovimiento) $('#editMovimiento').val(item.tipoMovimiento); else $('#editMovimiento').val('');
+            if(item.tipoDestino) $('#editTipoDestino').val(item.tipoDestino); else $('#editTipoDestino').val('');
+            if(item.destino) $('#editDestino').val(item.destino); else $('#editDestino').val('');
+            if(item.origen) $('#editOrigenes').val(item.origen); else $('#editOrigenes').val('');
+            if(item.bolsas) $('#editBolsas').val(item.bolsas); else $('#editBolsas').val('1');
+            if(item.aplicaOrden == 1 || item.aplicaOrden === true) {
+                $('#editOrdenPuerto').prop('checked', true);
+            } else {
+                $('#editOrdenPuerto').prop('checked', false);
+            }
+
+            // Validación y generación dinámica de tarjetas al cambiar bolsas (edición)
+            $(document).off('input change', '#editBolsas').on('input change', '#editBolsas', function() {
+                let val = $(this).val();
+                val = val.replace(/[^0-9]/g, '');
+                let intVal = parseInt(val, 10);
+                if (isNaN(intVal)) intVal = '';
+                else if (intVal < 1) intVal = 1;
+                else if (intVal > 6) intVal = 6;
+                if (val !== '' && (val.includes('.') || val.includes(',') || /[^0-9]/.test(val))) {
+                    mostrarAlerta('Solo se permiten números enteros entre 1 y 6', 'warning');
+                }
+                $(this).val(intVal);
+                // Solo actualizar tarjetas si el valor es válido
+                if (intVal >= 1 && intVal <= 6) {
+                    let viajesArr = [];
+                    let analisisArr = [];
+                    $('.edit-viajes-bolsa').each(function(){ viajesArr.push($(this).val()); });
+                    $('.edit-tipo-analisis').each(function(){ analisisArr.push($(this).val()); });
+                    let tarjetas = generarTarjetas(intVal, viajesArr, analisisArr, 'editar');
+                    // Reemplazar solo la fila de tarjetas
+                    $('#modalEditar .row').replaceWith(`<div class='row'>${tarjetas}</div>`);
+                }
+            });
+
+            // Lógica condicional para mostrar/ocultar campos según Tipo Movimiento en el modal editar
+            function actualizarCamposPorMovimientoEditar() {
+                const tipoMovimiento = $('#editMovimiento').val();
+                if (tipoMovimiento === 'DESPACHO') {
+                    $('#editTipoDestino').closest('.form-group').show().find('select').prop('required', true);
+                    $('#editDestino').closest('.form-group').show().find('select').prop('required', true);
+                    $('#editOrigenes').closest('.form-group').hide().find('select').prop('required', false).val('');
+                } else if (tipoMovimiento === 'RECEPCIÓN') {
+                    $('#editTipoDestino').closest('.form-group').hide().find('select').prop('required', false).val('');
+                    $('#editDestino').closest('.form-group').hide().find('select').prop('required', false).val('');
+                    $('#editOrigenes').closest('.form-group').show().find('select').prop('required', true);
+                } else {
+                    $('#editTipoDestino').closest('.form-group').hide().find('select').prop('required', false).val('');
+                    $('#editDestino').closest('.form-group').hide().find('select').prop('required', false).val('');
+                    $('#editOrigenes').closest('.form-group').hide().find('select').prop('required', false).val('');
+                }
+            }
+            // Inicializar visibilidad al cargar el modal
+            actualizarCamposPorMovimientoEditar();
+            // Evento cambio de tipoMovimiento en el modal editar
+            $('#editMovimiento').on('change', function() {
+                actualizarCamposPorMovimientoEditar();
+                // Limpiar selects relacionados al cambiar tipo de movimiento
+                $('#editTipoDestino').val('');
+                $('#editDestino').val('');
+                $('#editOrigenes').val('');
+            });
+
+            $('#modalEditar').modal('show');
+
+            // Validación en tiempo real para el modal editar
+            $('#formEditar').off('input change').on('input change', 'select, input', function() {
+                if ($(this).prop('required')) {
+                    if (!$(this).val()) {
+                        $(this).addClass('is-invalid');
+                    } else {
+                        $(this).removeClass('is-invalid');
+                    }
+                }
+            });
+
+            // Guardar cambios (puedes adaptar el submit del formulario aquí)
+            $('#formEditar').off('submit').on('submit', function(e){
+                e.preventDefault();
+                // ... lógica de guardado ...
+            });
+        });
+
+        // Lógica condicional para mostrar/ocultar campos según Tipo Movimiento en el modal editar
+        function actualizarCamposPorMovimientoEditar() {
+            const tipoMovimiento = $('#editMovimiento').val();
+            if (tipoMovimiento === 'DESPACHO') {
+                $('#editTipoDestino').closest('.form-group').show().find('select').prop('required', true);
+                $('#editDestino').closest('.form-group').show().find('select').prop('required', true);
+                $('#editOrigenes').closest('.form-group').hide().find('select').prop('required', false).val('');
+            } else if (tipoMovimiento === 'RECEPCIÓN') {
+                $('#editTipoDestino').closest('.form-group').hide().find('select').prop('required', false).val('');
+                $('#editDestino').closest('.form-group').hide().find('select').prop('required', false).val('');
+                $('#editOrigenes').closest('.form-group').show().find('select').prop('required', true);
+            } else {
+                $('#editTipoDestino').closest('.form-group').hide().find('select').prop('required', false).val('');
+                $('#editDestino').closest('.form-group').hide().find('select').prop('required', false).val('');
+                $('#editOrigenes').closest('.form-group').hide().find('select').prop('required', false).val('');
+            }
         }
-        $('#modalEditar .modal-body').html(formHtml);
+        // Inicializar visibilidad al cargar el modal
+        actualizarCamposPorMovimientoEditar();
+        // Evento cambio de tipoMovimiento en el modal editar
+        $('#editMovimiento').on('change', function() {
+            actualizarCamposPorMovimientoEditar();
+            // Limpiar selects relacionados al cambiar tipo de movimiento
+            $('#editTipoDestino').val('');
+            $('#editDestino').val('');
+            $('#editOrigenes').val('');
+        });
+
         $('#modalEditar').modal('show');
-        // Aquí puedes agregar lógica para cargar selects y valores si es necesario
-        // ...
+
+        // Validación en tiempo real para el modal editar
+        $('#formEditar').off('input change').on('input change', 'select, input', function() {
+            if ($(this).prop('required')) {
+                if (!$(this).val()) {
+                    $(this).addClass('is-invalid');
+                } else {
+                    $(this).removeClass('is-invalid');
+                }
+            }
+        });
+
         // Guardar cambios (puedes adaptar el submit del formulario aquí)
         $('#formEditar').off('submit').on('submit', function(e){
             e.preventDefault();
