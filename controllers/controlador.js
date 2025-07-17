@@ -656,14 +656,15 @@ $(document).ready(function() {
             success: function(res) {
                 mostrarAlerta('¡Configuración guardada en base de datos!', 'success');
                 recargarTablaConfiguraciones(); // <--- Recargar tabla tras guardar
+                // Llamar al handler del botón limpiar para limpiar y ocultar los campos
+                $('#btnLimpiar').trigger('click');
             },
             error: function(xhr) {
                 mostrarAlerta('Error al guardar: ' + xhr.responseText, 'danger');
             }
         });
         // Limpiar formulario
-        this.reset();
-        $('#configDinamica').hide();
+        // ...el reseteo y ocultamiento ya se realiza en success, no repetir aquí...
     });
 
     // Botón Limpiar
