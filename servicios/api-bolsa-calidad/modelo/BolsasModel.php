@@ -8,17 +8,16 @@ class BolsasModel {
         global $conn;
         // Mapeo de nombres para las tablas
         $empresaMap = $this->getNombres('Proveedores', 'idProveedor', 'RazonSocial');
-        $centroMap = $this->getNombres('vDestino', 'idProveedor', 'Proveedor');
+        $centroMap = $this->getNombres('Destino', 'idDestino', 'Descripcion');
         $productoMap = $this->getNombres('vclasificacion', 'idProducto', 'Producto');
-        // Ahora tipoDestino usa la tabla Clase
         $tipoDestinoMap = $this->getNombres('Clase', 'idClase', 'Descripcion');
-        $destinoMap = $this->getNombres('vDestino', 'idProveedor', 'Proveedor');
+        $destinoMap = $this->getNombres('Destino', 'idDestino', 'Descripcion');
         $tipoAnalisisMap = $this->getNombres('TipoAnalisis', 'idTipoAnalisis', 'Descripcion');
 
         // Consulta principal para obtener las bolsas de calidad
         $sql = "SELECT b.id, b.empresa, b.centro, c.Descripcion as centroDespacho, b.producto, b.tipoMovimiento, b.tipoDestino, b.destino, b.origen, b.bolsas, b.aplicaOrden, b.activo, b.fechaCreacion
                 FROM BolsasCalidad b
-                LEFT JOIN vDestino c ON b.centro = c.idDestino
+                LEFT JOIN Destino c ON b.centro = c.idDestino
                 WHERE b.activo = 1 ORDER BY b.fechaCreacion ASC";
         $stmt = sqlsrv_query($conn, $sql);
         $bolsas = [];

@@ -1,3 +1,30 @@
+    // Recargar destino cuando cambie tipo destino
+    $('#tipoDestino').on('change', function() {
+        var idClase = $(this).val();
+        if (idClase) {
+            // Llamar directamente al endpoint destino filtrando por idClase
+            $.ajax({
+                url: '../servicios/api-bolsa-calidad/api.php/destino?idClase=' + encodeURIComponent(idClase),
+                method: 'GET',
+                dataType: 'json',
+                success: function(res) {
+                    var $select = $('#destino');
+                    $select.empty();
+                    $select.append('<option value="">Seleccione...</option>');
+                    if(res.success && Array.isArray(res.data)) {
+                        res.data.forEach(function(item) {
+                            $select.append('<option value="'+item.idDestino+'">'+(item.Descripcion || '-')+'</option>');
+                        });
+                    }
+                },
+                error: function(xhr) {
+                    $('#destino').empty().append('<option value="">Seleccione...</option>');
+                }
+            });
+        } else {
+            $('#destino').empty().append('<option value="">Seleccione...</option>');
+        }
+    });
 // Función global para mostrar alertas Bootstrap
 function mostrarAlerta(mensaje, tipo = 'info', tiempo = 3000) {
     let icon = 'info';
@@ -298,10 +325,21 @@ $(document).ready(function() {
             url = '../servicios/api-bolsa-calidad/api.php/clase';
             labelField = 'Descripcion';
             valueField = 'idClase';
+        } else if(selector === '#centroDespacho') {
+            url = '../servicios/api-bolsa-calidad/api.php/centrodespacho';
+            labelField = 'Descripcion';
+            valueField = 'idDestino';
+        } else if(selector === '#destino') {
+            // Se cargará dinámicamente según el tipo destino seleccionado
+            var idClase = $('#tipoDestino').val();
+            url = '../servicios/api-bolsa-calidad/api.php/destino' + (idClase ? ('?idClase=' + encodeURIComponent(idClase)) : '');
+            labelField = 'Descripcion';
+            valueField = 'idDestino';
         } else {
-            url = '../servicios/api-bolsa-calidad/api.php/vdestino';
-            labelField = 'Proveedor';
-            valueField = 'idProveedor';
+            // Por compatibilidad, si hay otros selects, puedes ajustar aquí
+            url = '../servicios/api-bolsa-calidad/api.php/centrodespacho';
+            labelField = 'Descripcion';
+            valueField = 'idDestino';
         }
         $.ajax({
             url: url,
@@ -316,11 +354,17 @@ $(document).ready(function() {
                         $select.append('<option value="'+item[valueField]+'">'+(item[labelField] || '-')+'</option>');
                     });
                 } else {
-                    mostrarAlerta('No se pudieron cargar los proveedores', 'danger');
+                    let msg = 'No se pudieron cargar los datos';
+                    if(selector === '#centroDespacho') msg = 'No se pudieron cargar los centros de despacho';
+                    else if(selector === '#destino') msg = 'No se pudieron cargar los destinos';
+                    mostrarAlerta(msg, 'danger');
                 }
             },
             error: function(xhr, status, error) {
-                mostrarAlerta('Error al consultar proveedores: ' + xhr.responseText, 'danger');
+                let msg = 'Error al consultar datos: ' + xhr.responseText;
+                if(selector === '#centroDespacho') msg = 'Error al consultar centros de despacho: ' + xhr.responseText;
+                else if(selector === '#destino') msg = 'Error al consultar destinos: ' + xhr.responseText;
+                mostrarAlerta(msg, 'danger');
             }
         });
     }
@@ -370,36 +414,13 @@ $(document).ready(function() {
             }
         });
     }
-    // Cargar destino (RESTful, igual que proveedores pero función separada)
-    function cargarDestinoSelect(selector) {
-        $.ajax({
-            url: '../servicios/api-bolsa-calidad/api.php/proveedores',
-            method: 'GET',
-            dataType: 'json',
-            success: function(res) {
-                if(res.success && Array.isArray(res.data)) {
-                    var $select = $(selector);
-                    $select.empty();
-                    $select.append('<option value="">Seleccione...</option>');
-                    res.data.forEach(function(prov) {
-                        $select.append('<option value="'+prov.idProveedor+'">'+prov.Proveedor+'</option>');
-                    });
-                } else {
-                    mostrarAlerta('No se pudieron cargar los destinos', 'danger');
-                }
-            },
-            error: function(xhr, status, error) {
-                mostrarAlerta('Error al consultar destinos: ' + xhr.responseText, 'danger');
-            }
-        });
-    }
 
     // Llenar todos los campos
     cargarProveedoresSelect('#empresa');
     cargarProveedoresSelect('#centroDespacho');
     cargarProveedoresSelect('#tipoDestino');
     cargarProveedoresSelect('#origenes');
-    cargarDestinoSelect('#destino');
+    // No cargar destino aquí, se cargará dinámicamente según tipoDestino
     cargarProductosSelect('#producto');
     cargarTiposAnalisisSelect('#tipoAnalisis');
 

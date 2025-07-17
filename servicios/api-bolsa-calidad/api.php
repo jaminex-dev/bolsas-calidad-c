@@ -145,9 +145,22 @@ function executeQuery($sql, $errorMessage = 'Error en consulta SQL') {
 }
 
 // ENDPOINTS 
-// Endpoint para vDestino 
-if ($method === 'GET' && $resource === 'vdestino') {
-    $sql = "SELECT DISTINCT idProveedor, Proveedor FROM vDestino WHERE Proveedor IS NOT NULL AND Proveedor <> '' ORDER BY Proveedor";
+// Endpoint para centro despacho (usando tabla Destino)
+if ($method === 'GET' && $resource === 'centrodespacho') {
+    $sql = "SELECT idDestino, Descripcion, idClase FROM Destino WHERE Descripcion IS NOT NULL AND Descripcion <> '' ORDER BY Descripcion";
+    $result = executeQuery($sql, 'Error al obtener centros de despacho');
+    echo json_encode($result);
+    exit;
+}
+
+// Endpoint para destino filtrado por tipo destino (idClase)
+if ($method === 'GET' && $resource === 'destino') {
+    $idClase = isset($_GET['idClase']) ? $_GET['idClase'] : null;
+    $where = " WHERE Descripcion IS NOT NULL AND Descripcion <> ''";
+    if ($idClase) {
+        $where .= " AND idClase = '" . addslashes($idClase) . "'";
+    }
+    $sql = "SELECT idDestino, Descripcion, idClase FROM Destino $where ORDER BY Descripcion";
     $result = executeQuery($sql, 'Error al obtener destinos');
     echo json_encode($result);
     exit;
