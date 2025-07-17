@@ -1,27 +1,29 @@
 $('#tipoDestino').on('change', function() {
         var idClase = $(this).val();
+        var $destino = $('#destino');
+        $destino.empty().append('<option value="">Seleccione...</option>');
         if (idClase) {
-            // Llamar directamente al endpoint destino filtrando por idClase
             $.ajax({
                 url: '../servicios/api-bolsa-calidad/api.php/destino?idClase=' + encodeURIComponent(idClase),
                 method: 'GET',
                 dataType: 'json',
                 success: function(res) {
-                    var $select = $('#destino');
-                    $select.empty();
-                    $select.append('<option value="">Seleccione...</option>');
-                    if(res.success && Array.isArray(res.data)) {
+                    $destino.empty().append('<option value="">Seleccione...</option>');
+                    if(res.success && Array.isArray(res.data) && res.data.length > 0) {
                         res.data.forEach(function(item) {
-                            $select.append('<option value="'+item.idDestino+'">'+(item.Descripcion || '-')+'</option>');
+                            $destino.append('<option value="'+item.idDestino+'">'+(item.Descripcion || '-')+'</option>');
                         });
+                        $destino.prop('disabled', false);
+                    } else {
+                        $destino.prop('disabled', true);
                     }
                 },
                 error: function(xhr) {
-                    $('#destino').empty().append('<option value="">Seleccione...</option>');
+                    $destino.empty().append('<option value="">Seleccione...</option>').prop('disabled', true);
                 }
             });
         } else {
-            $('#destino').empty().append('<option value="">Seleccione...</option>');
+            $destino.prop('disabled', true);
         }
     });
 // Función global para mostrar alertas Bootstrap
