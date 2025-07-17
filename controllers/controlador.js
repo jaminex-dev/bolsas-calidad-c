@@ -169,12 +169,12 @@ function generarFormEditarUnificado(obj) {
             </select></div>
         </div>
         <div class='form-row'>
+          <div class='form-group col-md-2'><label>Bolsas</label>
+            <input type='number' min='1' max='6' class='form-control' id='editBolsas' value='${numBolsas}' required></div>
           <div class='form-group col-md-4'><label>Tipo Destino</label>
             <select class='form-control' id='editTipoDestino' required>${tipoDestinoOptions}</select></div>
           <div class='form-group col-md-4'><label>Destino</label>
             <select class='form-control' id='editDestino' required>${destinoOptions}</select></div>
-          <div class='form-group col-md-2'><label>Bolsas</label>
-            <input type='number' min='1' max='6' class='form-control' id='editBolsas' value='${numBolsas}' required></div>
           <div class='form-group col-md-2'><label>Orígenes</label>
             <select class='form-control' id='editOrigenes' required>${origenesOptions}</select></div>
         </div>
@@ -688,12 +688,12 @@ $(document).ready(function() {
             mostrarAlerta('No se pudo obtener los datos para editar.', 'danger');
             return;
         }
+
         cargarTiposAnalisisGlobal(function() {
             let formHtml = generarFormEditarUnificado(item);
             if($('#modalEditar').length === 0) {
                 $('body').append(`<div class="modal fade" id="modalEditar" tabindex="-1" role="dialog"><div class="modal-dialog modal-lg" role="document"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Editar Configuración</h5><button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button></div><div class="modal-body"></div><div class="modal-footer"><button type="button" class="btn btn-primary" id="btnGuardarEdicion">Guardar Cambios</button><button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button></div></div></div></div>`);
             } else {
-                // Si ya existe, asegúrate de que el footer tenga el botón
                 if($('#modalEditar .modal-footer').length === 0) {
                     $('#modalEditar .modal-content').append('<div class="modal-footer"><button type="button" class="btn btn-primary" id="btnGuardarEdicion">Guardar Cambios</button><button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button></div>');
                 }
@@ -713,6 +713,50 @@ $(document).ready(function() {
                 $('#editOrdenPuerto').prop('checked', true);
             } else {
                 $('#editOrdenPuerto').prop('checked', false);
+            }
+
+            // --- Lógica dinámica para el campo Destino en edición ---
+            function cargarDestinoEdicion(idClase, selectedDestino) {
+                var $destino = $('#editDestino');
+                $destino.empty().append('<option value="">Seleccione...</option>').prop('disabled', true);
+                if (idClase) {
+                    $.ajax({
+                        url: '../servicios/api-bolsa-calidad/api.php/destino?idClase=' + encodeURIComponent(idClase),
+                        method: 'GET',
+                        dataType: 'json',
+                        success: function(res) {
+                            $destino.empty();
+                            $destino.append('<option value="">Seleccione...</option>');
+                            if(res.success && Array.isArray(res.data) && res.data.length > 0) {
+                                res.data.forEach(function(item) {
+                                    $destino.append('<option value="'+item.idDestino+'">'+(item.Descripcion || '-')+'</option>');
+                                });
+                                $destino.prop('disabled', false);
+                                if(selectedDestino) $destino.val(selectedDestino);
+                            } else {
+                                $destino.prop('disabled', true);
+                            }
+                        },
+                        error: function(xhr) {
+                            $destino.empty().append('<option value="">Seleccione...</option>').prop('disabled', true);
+                        }
+                    });
+                } else {
+                    $destino.empty().append('<option value="">Seleccione...</option>').prop('disabled', true);
+                }
+            }
+
+            // Evento para recargar destino en edición
+            $(document).off('change', '#editTipoDestino').on('change', '#editTipoDestino', function() {
+                var idClase = $(this).val();
+                cargarDestinoEdicion(idClase, null);
+            });
+
+            // Inicializar destino en edición si hay tipoDestino
+            if($('#editTipoDestino').val()) {
+                cargarDestinoEdicion($('#editTipoDestino').val(), $('#editDestino').val());
+            } else {
+                $('#editDestino').empty().append('<option value="">Seleccione...</option>').prop('disabled', true);
             }
 
             // Validación y generación dinámica de tarjetas al cambiar bolsas (edición)
