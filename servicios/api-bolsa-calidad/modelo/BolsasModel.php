@@ -114,8 +114,8 @@ class BolsasModel {
         $todoOk = true;
         $stmt = sqlsrv_query($conn, $sql, $params);
         if ($stmt === false) {
+            error_log('Error al insertar en BolsasCalidad: ' . print_r(sqlsrv_errors(), true));
             $todoOk = false;
-        } else {
         }
 
         if ($todoOk && !empty($data['detalles'])) {
@@ -129,9 +129,9 @@ class BolsasModel {
                 );
                 $stmtDet = sqlsrv_query($conn, $sqlDet, $paramsDet);
                 if ($stmtDet === false) {
+                    error_log('Error al insertar en BolsasCalidadDetalle: ' . print_r(sqlsrv_errors(), true));
                     $todoOk = false;
                     break;
-                } else {
                 }
             }
         } else if ($todoOk && empty($data['detalles'])) {

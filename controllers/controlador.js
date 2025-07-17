@@ -1,4 +1,3 @@
-    // Recargar destino cuando cambie tipo destino
     $('#tipoDestino').on('change', function() {
         var idClase = $(this).val();
         if (idClase) {
@@ -25,6 +24,37 @@
             $('#destino').empty().append('<option value="">Seleccione...</option>');
         }
     });
+// Recargar destino cuando cambie tipo destino
+$('#tipoDestino').on('change', function() {
+    var idClase = $(this).val();
+    var $destino = $('#destino');
+    $destino.empty().append('<option value="">Seleccione...</option>').prop('disabled', true);
+    if (idClase) {
+        // Llamar directamente al endpoint destino filtrando por idClase
+        $.ajax({
+            url: '../servicios/api-bolsa-calidad/api.php/destino?idClase=' + encodeURIComponent(idClase),
+            method: 'GET',
+            dataType: 'json',
+            success: function(res) {
+                $destino.empty();
+                $destino.append('<option value="">Seleccione...</option>');
+                if(res.success && Array.isArray(res.data) && res.data.length > 0) {
+                    res.data.forEach(function(item) {
+                        $destino.append('<option value="'+item.idDestino+'">'+(item.Descripcion || '-')+'</option>');
+                    });
+                    $destino.prop('disabled', false);
+                } else {
+                    $destino.prop('disabled', true);
+                }
+            },
+            error: function(xhr) {
+                $destino.empty().append('<option value="">Seleccione...</option>').prop('disabled', true);
+            }
+        });
+    } else {
+        $destino.empty().append('<option value="">Seleccione...</option>').prop('disabled', true);
+    }
+});
 // Función global para mostrar alertas Bootstrap
 function mostrarAlerta(mensaje, tipo = 'info', tiempo = 3000) {
     let icon = 'info';
@@ -415,7 +445,6 @@ $(document).ready(function() {
         });
     }
 
-    // Llenar todos los campos
     cargarProveedoresSelect('#empresa');
     cargarProveedoresSelect('#centroDespacho');
     cargarProveedoresSelect('#tipoDestino');
@@ -424,6 +453,15 @@ $(document).ready(function() {
     cargarProductosSelect('#producto');
     cargarTiposAnalisisSelect('#tipoAnalisis');
 
+    // Llenar todos los campos
+    cargarProveedoresSelect('#empresa');
+    cargarProveedoresSelect('#centroDespacho');
+    cargarProveedoresSelect('#tipoDestino');
+    cargarProveedoresSelect('#origenes');
+    // No cargar destino aquí, se cargará dinámicamente según tipoDestino
+    $('#destino').empty().append('<option value="">Seleccione...</option>').prop('disabled', true);
+    cargarProductosSelect('#producto');
+    cargarTiposAnalisisSelect('#tipoAnalisis');
     // Evento cambio bolsas (crear)
     $('#bolsasCalidad').on('input change', function() {
         let self = this;
