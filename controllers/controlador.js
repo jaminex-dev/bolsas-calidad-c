@@ -287,10 +287,24 @@ $(document).ready(function() {
     // --- Recargar tabla de configuraciones ---
     recargarTablaConfiguraciones();
 
-    // Cargar proveedores (RESTful)
+    // Cargar proveedores (RESTful) y clase para tipoDestino
     function cargarProveedoresSelect(selector) {
+        var url, labelField, valueField;
+        if(selector === '#empresa') {
+            url = '../servicios/api-bolsa-calidad/api.php/proveedores';
+            labelField = 'RazonSocial';
+            valueField = 'idProveedor';
+        } else if(selector === '#tipoDestino') {
+            url = '../servicios/api-bolsa-calidad/api.php/clase';
+            labelField = 'Descripcion';
+            valueField = 'idClase';
+        } else {
+            url = '../servicios/api-bolsa-calidad/api.php/vdestino';
+            labelField = 'Proveedor';
+            valueField = 'idProveedor';
+        }
         $.ajax({
-            url: '../servicios/api-bolsa-calidad/api.php/proveedores',
+            url: url,
             method: 'GET',
             dataType: 'json',
             success: function(res) {
@@ -298,8 +312,8 @@ $(document).ready(function() {
                     var $select = $(selector);
                     $select.empty();
                     $select.append('<option value="">Seleccione...</option>');
-                    res.data.forEach(function(prov) {
-                        $select.append('<option value="'+prov.idProveedor+'">'+prov.Proveedor+'</option>');
+                    res.data.forEach(function(item) {
+                        $select.append('<option value="'+item[valueField]+'">'+(item[labelField] || '-')+'</option>');
                     });
                 } else {
                     mostrarAlerta('No se pudieron cargar los proveedores', 'danger');

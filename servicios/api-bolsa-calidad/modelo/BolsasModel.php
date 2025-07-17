@@ -7,10 +7,11 @@ class BolsasModel {
     public function getDatos($params = []) {
         global $conn;
         // Mapeo de nombres para las tablas
-        $empresaMap = $this->getNombres('vDestino', 'idProveedor', 'Proveedor');
+        $empresaMap = $this->getNombres('Proveedores', 'idProveedor', 'RazonSocial');
         $centroMap = $this->getNombres('vDestino', 'idProveedor', 'Proveedor');
         $productoMap = $this->getNombres('vclasificacion', 'idProducto', 'Producto');
-        $tipoDestinoMap = $this->getNombres('vDestino', 'idProveedor', 'Proveedor');
+        // Ahora tipoDestino usa la tabla Clase
+        $tipoDestinoMap = $this->getNombres('Clase', 'idClase', 'Descripcion');
         $destinoMap = $this->getNombres('vDestino', 'idProveedor', 'Proveedor');
         $tipoAnalisisMap = $this->getNombres('TipoAnalisis', 'idTipoAnalisis', 'Descripcion');
 
