@@ -603,168 +603,201 @@ $(document).ready(function() {
         mostrarAlerta('Formulario limpiado', 'info');
     });
 
-   // Editar registro
+    // Editar registro (unificada y funcional)
     $(document).on('click', '.btn-editar', function(){
         let row = $(this).closest('tr');
         let data = tablaConfiguraciones.row(row).data();
-        let id = data[10];
-        let item = null;
-        if (window.ultimaRespuestaBolsas && Array.isArray(window.ultimaRespuestaBolsas)) {
-            item = window.ultimaRespuestaBolsas.find(x => x.id == id);
-        }
-        if (!item) {
-            mostrarAlerta('No se pudo cargar el registro completo para edición.', 'danger');
+        let id = data[12] || data[11];
+        let item = {};
+        try {
+            item = JSON.parse(data[13]);
+        } catch(e) {
+            mostrarAlerta('No se pudo obtener los datos para editar.', 'danger');
             return;
         }
-        // Asegura que los tipos de análisis estén cargados antes de abrir el modal y generar tarjetas
         cargarTiposAnalisisGlobal(function() {
-            $('#editarBody').html(generarFormEditarUnificado(item));
-            // Setear valores en selects
-            $('#editEmpresa').val(item.empresa);
-            $('#editCentro').val(item.centro);
-            $('#editProducto').val(item.producto);
-            $('#editMovimiento').val(item.tipoMovimiento);
-            $('#editTipoDestino').val(item.tipoDestino);
-            $('#editDestino').val(item.destino);
-            $('#editOrigenes').val(item.origen);
+            let formHtml = generarFormEditarUnificado(item);
+            if($('#modalEditar').length === 0) {
+                $('body').append(`<div class="modal fade" id="modalEditar" tabindex="-1" role="dialog"><div class="modal-dialog modal-lg" role="document"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Editar Configuración</h5><button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button></div><div class="modal-body"></div><div class="modal-footer"><button type="button" class="btn btn-primary" id="btnGuardarEdicion">Guardar Cambios</button><button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button></div></div></div></div>`);
+            } else {
+                // Si ya existe, asegúrate de que el footer tenga el botón
+                if($('#modalEditar .modal-footer').length === 0) {
+                    $('#modalEditar .modal-content').append('<div class="modal-footer"><button type="button" class="btn btn-primary" id="btnGuardarEdicion">Guardar Cambios</button><button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button></div>');
+                }
+            }
+            $('#modalEditar .modal-body').html(formHtml);
+
+            // Setear valores en selects y campos solo si existen y no son nulos/vacíos
+            if(item.empresa) $('#editEmpresa').val(item.empresa); else $('#editEmpresa').val('');
+            if(item.centro) $('#editCentro').val(item.centro); else $('#editCentro').val('');
+            if(item.producto) $('#editProducto').val(item.producto); else $('#editProducto').val('');
+            if(item.tipoMovimiento) $('#editMovimiento').val(item.tipoMovimiento); else $('#editMovimiento').val('');
+            if(item.tipoDestino) $('#editTipoDestino').val(item.tipoDestino); else $('#editTipoDestino').val('');
+            if(item.destino) $('#editDestino').val(item.destino); else $('#editDestino').val('');
+            if(item.origen) $('#editOrigenes').val(item.origen); else $('#editOrigenes').val('');
+            if(item.bolsas) $('#editBolsas').val(item.bolsas); else $('#editBolsas').val('1');
+            if(item.aplicaOrden == 1 || item.aplicaOrden === true) {
+                $('#editOrdenPuerto').prop('checked', true);
+            } else {
+                $('#editOrdenPuerto').prop('checked', false);
+            }
+
+            // Validación y generación dinámica de tarjetas al cambiar bolsas (edición)
+            $(document).off('input change', '#editBolsas').on('input change', '#editBolsas', function() {
+                let val = $(this).val();
+                val = val.replace(/[^0-9]/g, '');
+                let intVal = parseInt(val, 10);
+                if (isNaN(intVal)) intVal = '';
+                else if (intVal < 1) intVal = 1;
+                else if (intVal > 6) intVal = 6;
+                if (val !== '' && (val.includes('.') || val.includes(',') || /[^0-9]/.test(val))) {
+                    mostrarAlerta('Solo se permiten números enteros entre 1 y 6', 'warning');
+                }
+                $(this).val(intVal);
+                // Solo actualizar tarjetas si el valor es válido
+                if (intVal >= 1 && intVal <= 6) {
+                    let viajesArr = [];
+                    let analisisArr = [];
+                    $('.edit-viajes-bolsa').each(function(){ viajesArr.push($(this).val()); });
+                    $('.edit-tipo-analisis').each(function(){ analisisArr.push($(this).val()); });
+                    let tarjetas = generarTarjetas(intVal, viajesArr, analisisArr, 'editar');
+                    $('#modalEditar .row').replaceWith(`<div class='row'>${tarjetas}</div>`);
+                }
+            });
+
             // Lógica condicional para mostrar/ocultar campos según Tipo Movimiento en el modal editar
             function actualizarCamposPorMovimientoEditar() {
                 const tipoMovimiento = $('#editMovimiento').val();
                 if (tipoMovimiento === 'DESPACHO') {
-                    // Mostrar y requerir destino y tipoDestino, ocultar y limpiar origenes
                     $('#editTipoDestino').closest('.form-group').show().find('select').prop('required', true);
                     $('#editDestino').closest('.form-group').show().find('select').prop('required', true);
                     $('#editOrigenes').closest('.form-group').hide().find('select').prop('required', false).val('');
                 } else if (tipoMovimiento === 'RECEPCIÓN') {
-                    // Mostrar y requerir origenes, ocultar y limpiar destino y tipoDestino
                     $('#editTipoDestino').closest('.form-group').hide().find('select').prop('required', false).val('');
                     $('#editDestino').closest('.form-group').hide().find('select').prop('required', false).val('');
                     $('#editOrigenes').closest('.form-group').show().find('select').prop('required', true);
                 } else {
-                    // Si no hay selección, ocultar todos y limpiar
                     $('#editTipoDestino').closest('.form-group').hide().find('select').prop('required', false).val('');
                     $('#editDestino').closest('.form-group').hide().find('select').prop('required', false).val('');
                     $('#editOrigenes').closest('.form-group').hide().find('select').prop('required', false).val('');
                 }
             }
-            // Inicializar visibilidad al cargar el modal
             actualizarCamposPorMovimientoEditar();
-            // Evento cambio de tipoMovimiento en el modal editar
             $('#editMovimiento').on('change', function() {
                 actualizarCamposPorMovimientoEditar();
-                // Limpiar selects relacionados al cambiar tipo de movimiento
                 $('#editTipoDestino').val('');
                 $('#editDestino').val('');
                 $('#editOrigenes').val('');
             });
+
             $('#modalEditar').modal('show');
-        });
-        // Actualizar tarjetas al cambiar bolsas (edición)
-        $(document).off('input change', '#editBolsas').on('input change', '#editBolsas', function() {
-            let val = $(this).val();
-            val = val.replace(/[^0-9]/g, '');
-            let intVal = parseInt(val, 10);
-            if (isNaN(intVal)) intVal = '';
-            else if (intVal < 1) intVal = 1;
-            else if (intVal > 6) intVal = 6;
-            if (val !== '' && (val.includes('.') || val.includes(',') || /[^0-9]/.test(val))) {
-                mostrarAlerta('Solo se permiten números enteros entre 1 y 6', 'warning');
-            }
-            $(this).val(intVal);
-            // Solo actualizar tarjetas si el valor es válido
-            if (intVal >= 1 && intVal <= 6) {
-                let viajesArr = [];
-                let analisisArr = [];
-                $('.edit-viajes-bolsa').each(function(){ viajesArr.push($(this).val()); });
-                $('.edit-tipo-analisis').each(function(){ analisisArr.push($(this).val()); });
-                let tarjetas = generarTarjetas(intVal, viajesArr, analisisArr, 'editar');
-                $('#editarBody .row.mt-3').replaceWith(`<div class='row mt-3'>${tarjetas}</div>`);
-            }
-        });
-        // Validación en tiempo real para el modal editar
-        $('#editarBody').on('input change', 'select, input', function() {
-            if ($(this).prop('required')) {
-                if (!$(this).val()) {
-                    $(this).addClass('is-invalid');
-                } else {
-                    $(this).removeClass('is-invalid');
-                }
-            }
-        });
-        // Guardar cambios
-        $('#btnGuardarEdicion').off('click').on('click', function() {
-            let valid = true;
-            // Validar todos los campos requeridos
-            $('#formEditar [required]').each(function() {
-                if (!$(this).val() || $(this).val() === '') {
-                    $(this).addClass('is-invalid');
-                    valid = false;
-                } else {
-                    $(this).removeClass('is-invalid');
+
+            // Validación en tiempo real para el modal editar
+            $('#formEditar').off('input change').on('input change', 'select, input', function() {
+                if ($(this).prop('required')) {
+                    if (!$(this).val()) {
+                        $(this).addClass('is-invalid');
+                    } else {
+                        $(this).removeClass('is-invalid');
+                    }
                 }
             });
-            if (!valid) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Campos obligatorios',
-                    text: 'Por favor complete todos los campos obligatorios antes de guardar.',
-                    confirmButtonText: 'Aceptar'
+
+            // Botón Guardar Cambios dispara el submit del formulario
+            $('#btnGuardarEdicion').off('click').on('click', function(){
+                $('#formEditar').submit();
+            });
+
+            // Guardar cambios (submit unificado y funcional)
+            $('#formEditar').off('submit').on('submit', function(e){
+                e.preventDefault();
+                let valid = true;
+                const tipoMovimiento = $('#editMovimiento').val();
+                if (!$('#editEmpresa').val()) { $('#editEmpresa').addClass('is-invalid'); valid = false; }
+                if (!$('#editCentro').val()) { $('#editCentro').addClass('is-invalid'); valid = false; }
+                if (!$('#editProducto').val()) { $('#editProducto').addClass('is-invalid'); valid = false; }
+                if (!tipoMovimiento) { $('#editMovimiento').addClass('is-invalid'); valid = false; }
+                if (tipoMovimiento === 'DESPACHO') {
+                    if (!$('#editTipoDestino').val()) { $('#editTipoDestino').addClass('is-invalid'); valid = false; }
+                    if (!$('#editDestino').val()) { $('#editDestino').addClass('is-invalid'); valid = false; }
+                }
+                if (tipoMovimiento === 'RECEPCIÓN') {
+                    if (!$('#editOrigenes').val()) { $('#editOrigenes').addClass('is-invalid'); valid = false; }
+                }
+                if (!$('#editBolsas').val() || isNaN($('#editBolsas').val()) || $('#editBolsas').val() < 1 || $('#editBolsas').val() > 6) {
+                    $('#editBolsas').addClass('is-invalid'); valid = false;
+                }
+                $('.edit-viajes-bolsa').each(function(){ if (!$(this).val()) { $(this).addClass('is-invalid'); valid = false; } });
+                $('.edit-tipo-analisis').each(function(){ if (!$(this).val()) { $(this).addClass('is-invalid'); valid = false; } });
+                if (!valid) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Campos obligatorios',
+                        text: 'Por favor complete todos los campos obligatorios antes de guardar.',
+                        confirmButtonText: 'Aceptar'
+                    });
+                    return;
+                }
+                let editViajes = [];
+                let editAnalisis = [];
+                $('.edit-viajes-bolsa').each(function(i){
+                    editViajes[i] = $(this).val();
                 });
-                return;
-            }
-            let editViajes = [];
-            let editAnalisis = [];
-            $('.edit-viajes-bolsa').each(function(i){
-                editViajes[i] = editViajes[i] || {};
-                editViajes[i] = $(this).val();
-            });
-            $('.edit-tipo-analisis').each(function(i){
-                editAnalisis[i] = editAnalisis[i] || {};
-                editAnalisis[i] = $(this).val();
-            });
-            let detalles = [];
-            for (let i = 0; i < editViajes.length; i++) {
-                detalles[i] = detalles[i] || {};
-                detalles[i].numeroBolsa = i+1;
-                detalles[i].viajes = editViajes[i];
-                detalles[i].idTipoAnalisis = editAnalisis[i];
-            }
-            // Obtener valores del formulario
-            const empresa = $('#editEmpresa').val();
-            const centro = $('#editCentro').val();
-            const producto = $('#editProducto').val();
-            const tipoMovimiento = $('#editMovimiento').val();
-            const tipoDestino = $('#editTipoDestino').val();
-            const origen = $('#editOrigenes').val();
-            const bolsas = $('#editBolsas').val();
-            const aplicaOrden = $('#editOrdenPuerto').is(':checked') ? 1 : 0;
-            // Enviar PUT a la API
-            $.ajax({
-                url: '../servicios/api-bolsa-calidad/api.php/bolsas/' + encodeURIComponent(id),
-                method: 'PUT',
-                contentType: 'application/json',
-                data: JSON.stringify({
-                    empresa,
-                    centro,
-                    producto,
-                    tipoMovimiento,
-                    tipoDestino,
-                    origen,
-                    bolsas,
-                    aplicaOrden,
-                    detalles
-                }),
-                success: function(res) {
-                    mostrarAlerta('¡Configuración actualizada correctamente!', 'success');
-                    $('#modalEditar').modal('hide');
-                    recargarTablaConfiguraciones();
-                },
-                error: function(xhr) {
-                    mostrarAlerta('Error al actualizar: ' + xhr.responseText, 'danger');
+                $('.edit-tipo-analisis').each(function(i){
+                    editAnalisis[i] = $(this).val();
+                });
+                let detalles = [];
+                for (let i = 0; i < editViajes.length; i++) {
+                    detalles[i] = detalles[i] || {};
+                    detalles[i].numeroBolsa = i+1;
+                    detalles[i].viajes = editViajes[i];
+                    detalles[i].idTipoAnalisis = editAnalisis[i];
                 }
+                // Obtener valores del formulario (idéntico a la lógica de creación)
+                const empresa = $('#editEmpresa').val();
+                const centro = $('#editCentro').val();
+                const producto = $('#editProducto').val();
+                let tipoDestino = null;
+                let destino = null;
+                let origen = null;
+                if (tipoMovimiento === 'DESPACHO') {
+                    tipoDestino = $('#editTipoDestino').val();
+                    destino = $('#editDestino').val();
+                }
+                if (tipoMovimiento === 'RECEPCIÓN') {
+                    origen = $('#editOrigenes').val();
+                }
+                const bolsas = $('#editBolsas').val();
+                const aplicaOrden = $('#editOrdenPuerto').is(':checked') ? 1 : 0;
+                // Enviar PUT a la API
+                $.ajax({
+                    url: '../servicios/api-bolsa-calidad/api.php/bolsas/' + encodeURIComponent(id),
+                    method: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        empresa,
+                        centro,
+                        producto,
+                        tipoMovimiento,
+                        tipoDestino,
+                        destino,
+                        origen,
+                        bolsas,
+                        aplicaOrden,
+                        detalles
+                    }),
+                    success: function(res) {
+                        mostrarAlerta('¡Configuración actualizada correctamente!', 'success');
+                        $('#modalEditar').modal('hide');
+                        recargarTablaConfiguraciones();
+                    },
+                    error: function(xhr) {
+                        mostrarAlerta('Error al actualizar: ' + xhr.responseText, 'danger');
+                    }
+                });
             });
         });
-    }); 
+    });
 
     // Eliminar registro
     $(document).on('click', '.btn-eliminar', function(){
@@ -803,160 +836,7 @@ $(document).ready(function() {
         });
     });
 
-    // Editar registro
-    $(document).on('click', '.btn-editar', function(){
-        let row = $(this).closest('tr');
-        let data = tablaConfiguraciones.row(row).data();
-        let id = data[12] || data[11];
-        let item = {};
-        try {
-            item = JSON.parse(data[13]);
-        } catch(e) {
-            mostrarAlerta('No se pudo obtener los datos para editar.', 'danger');
-            return;
-        }
-        // Esperar a que los tipos de análisis estén cargados antes de generar el formulario y las tarjetas
-        cargarTiposAnalisisGlobal(function() {
-            let formHtml = generarFormEditarUnificado(item);
-            if($('#modalEditar').length === 0) {
-                $('body').append(`<div class="modal fade" id="modalEditar" tabindex="-1" role="dialog"><div class="modal-dialog modal-lg" role="document"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Editar Configuración</h5><button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button></div><div class="modal-body"></div></div></div></div>`);
-            }
-            $('#modalEditar .modal-body').html(formHtml);
-
-            // Setear valores en selects y campos solo si existen y no son nulos/vacíos
-            if(item.empresa) $('#editEmpresa').val(item.empresa); else $('#editEmpresa').val('');
-            if(item.centro) $('#editCentro').val(item.centro); else $('#editCentro').val('');
-            if(item.producto) $('#editProducto').val(item.producto); else $('#editProducto').val('');
-            if(item.tipoMovimiento) $('#editMovimiento').val(item.tipoMovimiento); else $('#editMovimiento').val('');
-            if(item.tipoDestino) $('#editTipoDestino').val(item.tipoDestino); else $('#editTipoDestino').val('');
-            if(item.destino) $('#editDestino').val(item.destino); else $('#editDestino').val('');
-            if(item.origen) $('#editOrigenes').val(item.origen); else $('#editOrigenes').val('');
-            if(item.bolsas) $('#editBolsas').val(item.bolsas); else $('#editBolsas').val('1');
-            if(item.aplicaOrden == 1 || item.aplicaOrden === true) {
-                $('#editOrdenPuerto').prop('checked', true);
-            } else {
-                $('#editOrdenPuerto').prop('checked', false);
-            }
-
-            // Validación y generación dinámica de tarjetas al cambiar bolsas (edición)
-            $(document).off('input change', '#editBolsas').on('input change', '#editBolsas', function() {
-                let val = $(this).val();
-                val = val.replace(/[^0-9]/g, '');
-                let intVal = parseInt(val, 10);
-                if (isNaN(intVal)) intVal = '';
-                else if (intVal < 1) intVal = 1;
-                else if (intVal > 6) intVal = 6;
-                if (val !== '' && (val.includes('.') || val.includes(',') || /[^0-9]/.test(val))) {
-                    mostrarAlerta('Solo se permiten números enteros entre 1 y 6', 'warning');
-                }
-                $(this).val(intVal);
-                // Solo actualizar tarjetas si el valor es válido
-                if (intVal >= 1 && intVal <= 6) {
-                    let viajesArr = [];
-                    let analisisArr = [];
-                    $('.edit-viajes-bolsa').each(function(){ viajesArr.push($(this).val()); });
-                    $('.edit-tipo-analisis').each(function(){ analisisArr.push($(this).val()); });
-                    let tarjetas = generarTarjetas(intVal, viajesArr, analisisArr, 'editar');
-                    // Reemplazar solo la fila de tarjetas
-                    $('#modalEditar .row').replaceWith(`<div class='row'>${tarjetas}</div>`);
-                }
-            });
-
-            // Lógica condicional para mostrar/ocultar campos según Tipo Movimiento en el modal editar
-            function actualizarCamposPorMovimientoEditar() {
-                const tipoMovimiento = $('#editMovimiento').val();
-                if (tipoMovimiento === 'DESPACHO') {
-                    $('#editTipoDestino').closest('.form-group').show().find('select').prop('required', true);
-                    $('#editDestino').closest('.form-group').show().find('select').prop('required', true);
-                    $('#editOrigenes').closest('.form-group').hide().find('select').prop('required', false).val('');
-                } else if (tipoMovimiento === 'RECEPCIÓN') {
-                    $('#editTipoDestino').closest('.form-group').hide().find('select').prop('required', false).val('');
-                    $('#editDestino').closest('.form-group').hide().find('select').prop('required', false).val('');
-                    $('#editOrigenes').closest('.form-group').show().find('select').prop('required', true);
-                } else {
-                    $('#editTipoDestino').closest('.form-group').hide().find('select').prop('required', false).val('');
-                    $('#editDestino').closest('.form-group').hide().find('select').prop('required', false).val('');
-                    $('#editOrigenes').closest('.form-group').hide().find('select').prop('required', false).val('');
-                }
-            }
-            // Inicializar visibilidad al cargar el modal
-            actualizarCamposPorMovimientoEditar();
-            // Evento cambio de tipoMovimiento en el modal editar
-            $('#editMovimiento').on('change', function() {
-                actualizarCamposPorMovimientoEditar();
-                // Limpiar selects relacionados al cambiar tipo de movimiento
-                $('#editTipoDestino').val('');
-                $('#editDestino').val('');
-                $('#editOrigenes').val('');
-            });
-
-            $('#modalEditar').modal('show');
-
-            // Validación en tiempo real para el modal editar
-            $('#formEditar').off('input change').on('input change', 'select, input', function() {
-                if ($(this).prop('required')) {
-                    if (!$(this).val()) {
-                        $(this).addClass('is-invalid');
-                    } else {
-                        $(this).removeClass('is-invalid');
-                    }
-                }
-            });
-
-            // Guardar cambios (puedes adaptar el submit del formulario aquí)
-            $('#formEditar').off('submit').on('submit', function(e){
-                e.preventDefault();
-                // ... lógica de guardado ...
-            });
-        });
-
-        // Lógica condicional para mostrar/ocultar campos según Tipo Movimiento en el modal editar
-        function actualizarCamposPorMovimientoEditar() {
-            const tipoMovimiento = $('#editMovimiento').val();
-            if (tipoMovimiento === 'DESPACHO') {
-                $('#editTipoDestino').closest('.form-group').show().find('select').prop('required', true);
-                $('#editDestino').closest('.form-group').show().find('select').prop('required', true);
-                $('#editOrigenes').closest('.form-group').hide().find('select').prop('required', false).val('');
-            } else if (tipoMovimiento === 'RECEPCIÓN') {
-                $('#editTipoDestino').closest('.form-group').hide().find('select').prop('required', false).val('');
-                $('#editDestino').closest('.form-group').hide().find('select').prop('required', false).val('');
-                $('#editOrigenes').closest('.form-group').show().find('select').prop('required', true);
-            } else {
-                $('#editTipoDestino').closest('.form-group').hide().find('select').prop('required', false).val('');
-                $('#editDestino').closest('.form-group').hide().find('select').prop('required', false).val('');
-                $('#editOrigenes').closest('.form-group').hide().find('select').prop('required', false).val('');
-            }
-        }
-        // Inicializar visibilidad al cargar el modal
-        actualizarCamposPorMovimientoEditar();
-        // Evento cambio de tipoMovimiento en el modal editar
-        $('#editMovimiento').on('change', function() {
-            actualizarCamposPorMovimientoEditar();
-            // Limpiar selects relacionados al cambiar tipo de movimiento
-            $('#editTipoDestino').val('');
-            $('#editDestino').val('');
-            $('#editOrigenes').val('');
-        });
-
-        $('#modalEditar').modal('show');
-
-        // Validación en tiempo real para el modal editar
-        $('#formEditar').off('input change').on('input change', 'select, input', function() {
-            if ($(this).prop('required')) {
-                if (!$(this).val()) {
-                    $(this).addClass('is-invalid');
-                } else {
-                    $(this).removeClass('is-invalid');
-                }
-            }
-        });
-
-        // Guardar cambios (puedes adaptar el submit del formulario aquí)
-        $('#formEditar').off('submit').on('submit', function(e){
-            e.preventDefault();
-            // ... lógica de guardado ...
-        });
-    });
+    // ...la versión unificada y funcional de edición ya está implementada arriba...
 
     // Buscador fuera del DataTable
     $('#buscadorConfiguraciones').on('keyup', function() {
