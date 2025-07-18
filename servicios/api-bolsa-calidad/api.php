@@ -102,8 +102,18 @@ switch ($method) {
         break;
 }
 
+// Función para limpiar y normalizar texto (eliminar caracteres especiales y acentos)
+function limpiarTexto($texto) {
+    if (!is_string($texto)) return $texto;
+    $texto = html_entity_decode($texto, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $texto = preg_replace('/[\x00-\x1F\x7F]/u', '', $texto); // quitar caracteres de control
+    $texto = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $texto); // quitar acentos
+    $texto = preg_replace('/[^\p{L}\p{N} .\-\/]/u', '', $texto); // solo letras, números y algunos símbolos
+    return trim($texto);
+}
+
 // Función helper para ejecutar consultas SQL
-function executeQuery($sql, $errorMessage = 'Error en consulta SQL') {
+function executeQuery($sql, $errorMessage = 'Error en consulta SQL', $limpiarCampos = []) {
     try {
        global $conn;
         $stmt = sqlsrv_query($conn, $sql);
@@ -121,6 +131,12 @@ function executeQuery($sql, $errorMessage = 'Error en consulta SQL') {
         }
         
         while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+            // Limpiar campos indicados
+            foreach ($limpiarCampos as $campo) {
+                if (isset($row[$campo])) {
+                    $row[$campo] = limpiarTexto($row[$campo]);
+                }
+            }
             $data[] = $row;
         }
         
@@ -167,7 +183,7 @@ if ($method === 'GET' && $resource === 'proveedores' && $id) {
 // Endpoint para proveedores 
 if ($method === 'GET' && $resource === 'proveedores') {
     $sql = "SELECT idProveedor, RazonSocial FROM Proveedores WHERE RazonSocial IS NOT NULL AND RazonSocial <> '' ORDER BY RazonSocial";
-    $result = executeQuery($sql, 'Error al obtener proveedores');
+    $result = executeQuery($sql, 'Error al obtener proveedores', ['RazonSocial']);
     echo json_encode($result);
     exit;
 }
@@ -210,6 +226,14 @@ if ($method === 'GET' && $resource === 'tiposanalisis' && $id) {
 if ($method === 'GET' && $resource === 'tiposanalisis') {
     $sql = "SELECT idTipoAnalisis, Descripcion FROM TipoAnalisis WHERE Descripcion IS NOT NULL AND Descripcion <> ''";
     $result = executeQuery($sql, 'Error al obtener tipos de análisis');
+    echo json_encode($result);
+    exit;
+}
+
+// Endpoint para origenes (solo minas únicas, texto legible)
+if ($method === 'GET' && $resource === 'origenes') {
+    $sql = "SELECT MIN(idOrigen) as idOrigen, Mina FROM Origenes WHERE Mina IS NOT NULL AND Mina <> '' GROUP BY Mina ORDER BY Mina";
+    $result = executeQuery($sql, 'Error al obtener origenes', ['Mina']);
     echo json_encode($result);
     exit;
 }

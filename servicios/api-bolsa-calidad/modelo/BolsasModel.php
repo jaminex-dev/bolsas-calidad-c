@@ -12,6 +12,7 @@ class BolsasModel {
         $productoMap = $this->getNombres('vclasificacion', 'idProducto', 'Producto');
         $tipoDestinoMap = $this->getNombres('Clase', 'idClase', 'Descripcion');
         $destinoMap = $this->getNombres('Destino', 'idDestino', 'Descripcion');
+        $origenMap = $this->getNombres('Origenes', 'idOrigen', 'Mina');
         $tipoAnalisisMap = $this->getNombres('TipoAnalisis', 'idTipoAnalisis', 'Descripcion');
 
         // Consulta principal para obtener las bolsas de calidad
@@ -35,7 +36,7 @@ class BolsasModel {
             $bolsa['productoNombre'] = $productoMap[$bolsa['producto']] ?? $bolsa['producto'];
             $bolsa['tipoDestinoNombre'] = $tipoDestinoMap[$bolsa['tipoDestino']] ?? $bolsa['tipoDestino'];
             $bolsa['destinoNombre'] = $destinoMap[$bolsa['destino']] ?? ($bolsa['destino'] ?? '');
-            $bolsa['origenNombre'] = $destinoMap[$bolsa['origen']] ?? $bolsa['origen'];
+            $bolsa['origenNombre'] = $origenMap[$bolsa['origen']] ?? $bolsa['origen'];
             // Detalles de bolsas
             $sqlDet = "SELECT d.numeroBolsa, d.viajes, d.idTipoAnalisis FROM BolsasCalidadDetalle d WHERE d.idBolsasCalidad = ? ORDER BY d.numeroBolsa ASC";
             $paramsDet = array($bolsa['id']);

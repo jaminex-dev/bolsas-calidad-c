@@ -1,32 +1,64 @@
 // Controlador para la gestión de bolsas de calidad
 $('#tipoDestino').on('change', function() {
-        var idClase = $(this).val();
-        var $destino = $('#destino');
-        $destino.empty().append('<option value="">Seleccione...</option>');
-        if (idClase) {
-            $.ajax({
-                url: '../servicios/api-bolsa-calidad/api.php/destino?idClase=' + encodeURIComponent(idClase),
-                method: 'GET',
-                dataType: 'json',
-                success: function(res) {
-                    $destino.empty().append('<option value="">Seleccione...</option>');
-                    if(res.success && Array.isArray(res.data) && res.data.length > 0) {
-                        res.data.forEach(function(item) {
-                            $destino.append('<option value="'+item.idDestino+'">'+(item.Descripcion || '-')+'</option>');
-                        });
-                        $destino.prop('disabled', false);
-                    } else {
-                        $destino.prop('disabled', true);
-                    }
-                },
-                error: function(xhr) {
-                    $destino.empty().append('<option value="">Seleccione...</option>').prop('disabled', true);
+    var idClase = $(this).val();
+    var $destino = $('#destino');
+    $destino.empty().append('<option value="">Seleccione...</option>');
+    if (idClase) {
+        $.ajax({
+            url: '../servicios/api-bolsa-calidad/api.php/destino?idClase=' + encodeURIComponent(idClase),
+            method: 'GET',
+            dataType: 'json',
+            success: function(res) {
+                $destino.empty().append('<option value="">Seleccione...</option>');
+                if(res.success && Array.isArray(res.data) && res.data.length > 0) {
+                    res.data.forEach(function(item) {
+                        $destino.append('<option value="'+item.idDestino+'">'+(item.Descripcion || '-')+'</option>');
+                    });
+                    $destino.prop('disabled', false);
+                } else {
+                    $destino.prop('disabled', true);
                 }
-            });
-        } else {
-            $destino.prop('disabled', true);
-        }
-    });
+            },
+            error: function(xhr) {
+                $destino.empty().append('<option value="">Seleccione...</option>').prop('disabled', true);
+            }
+        });
+    } else {
+        $destino.prop('disabled', true);
+    }
+});
+
+// Función para decodificar entidades HTML y mostrar caracteres especiales correctamente
+function decodeHtmlEntities(str) {
+    if (!str) return '';
+    return $('<textarea/>').html(str).text();
+}
+
+// Llenar select de origenes al cargar la página
+$(document).ready(function() {
+    var $origenes = $('#origenes');
+    if ($origenes.length) {
+        $.ajax({
+            url: '../servicios/api-bolsa-calidad/api.php/origenes',
+            method: 'GET',
+            dataType: 'json',
+            success: function(res) {
+                $origenes.empty().append('<option value="">Seleccione...</option>');
+                if(res.success && Array.isArray(res.data) && res.data.length > 0) {
+                    res.data.forEach(function(item) {
+                        $origenes.append('<option value="'+item.idOrigen+'">'+decodeHtmlEntities(item.Mina || '-')+'</option>');
+                    });
+                    $origenes.prop('disabled', false);
+                } else {
+                    $origenes.prop('disabled', true);
+                }
+            },
+            error: function(xhr) {
+                $origenes.empty().append('<option value="">Seleccione...</option>').prop('disabled', true);
+            }
+        });
+    }
+});
 // Función global para mostrar alertas Bootstrap
 function mostrarAlerta(mensaje, tipo = 'info', tiempo = 3000) {
     let icon = 'info';
@@ -51,7 +83,7 @@ let tiposAnalisisGlobal = [];
 function generarOpcionesSelect(options, selected, placeholder = 'Seleccione...') {
     let html = `<option value="">${placeholder}</option>`;
     options.forEach(opt => {
-        html += `<option value="${opt.value}"${opt.value == selected ? ' selected' : ''}>${opt.text}</option>`;
+        html += `<option value="${opt.value}"${opt.value == selected ? ' selected' : ''}>${decodeHtmlEntities(opt.text)}</option>`;
     });
     return html;
 }
