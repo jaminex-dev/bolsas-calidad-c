@@ -157,10 +157,24 @@ if ($method === 'GET' && $resource === 'destino') {
     echo json_encode($result);
     exit;
 }
+// Endpoint para proveedor por ID
+if ($method === 'GET' && $resource === 'proveedores' && $id) {
+    $sql = "SELECT idProveedor, RazonSocial FROM Proveedores WHERE idProveedor = '" . addslashes($id) . "'";
+    $result = executeQuery($sql, 'Error al obtener proveedor');
+    echo json_encode($result);
+    exit;
+}
 // Endpoint para proveedores 
 if ($method === 'GET' && $resource === 'proveedores') {
     $sql = "SELECT idProveedor, RazonSocial FROM Proveedores WHERE RazonSocial IS NOT NULL AND RazonSocial <> '' ORDER BY RazonSocial";
     $result = executeQuery($sql, 'Error al obtener proveedores');
+    echo json_encode($result);
+    exit;
+}
+// Endpoint para producto por ID
+if ($method === 'GET' && $resource === 'productos' && $id) {
+    $sql = "SELECT DISTINCT idProducto, Producto FROM vclasificacion WHERE idProducto = '" . addslashes($id) . "'";
+    $result = executeQuery($sql, 'Error al obtener producto');
     echo json_encode($result);
     exit;
 }
@@ -171,10 +185,24 @@ if ($method === 'GET' && $resource === 'productos') {
     echo json_encode($result);
     exit;
 }
+// Endpoint para clase por ID
+if ($method === 'GET' && $resource === 'clase' && $id) {
+    $sql = "SELECT idClase, Descripcion FROM Clase WHERE idClase = '" . addslashes($id) . "'";
+    $result = executeQuery($sql, 'Error al obtener clase');
+    echo json_encode($result);
+    exit;
+}
 // Endpoint para clase
 if ($method === 'GET' && $resource === 'clase') {
     $sql = "SELECT idClase, Descripcion FROM Clase WHERE Descripcion IS NOT NULL AND Descripcion <> '' ORDER BY Descripcion";
     $result = executeQuery($sql, 'Error al obtener clases');
+    echo json_encode($result);
+    exit;
+}
+// Endpoint para tipo de análisis por ID
+if ($method === 'GET' && $resource === 'tiposanalisis' && $id) {
+    $sql = "SELECT idTipoAnalisis, Descripcion FROM TipoAnalisis WHERE idTipoAnalisis = '" . addslashes($id) . "'";
+    $result = executeQuery($sql, 'Error al obtener tipo de análisis');
     echo json_encode($result);
     exit;
 }
