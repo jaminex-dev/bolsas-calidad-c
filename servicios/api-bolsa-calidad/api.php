@@ -153,14 +153,20 @@ function executeQuery($sql, $errorMessage = 'Error en consulta SQL', $limpiarCam
 }
 
 // ENDPOINTS 
-// Endpoint para centro despacho
-if ($method === 'GET' && $resource === 'centrodespacho') {
-    $sql = "SELECT idDestino, Descripcion, idClase FROM Destino WHERE Descripcion IS NOT NULL AND Descripcion <> '' ORDER BY Descripcion";
-    $result = executeQuery($sql, 'Error al obtener centros de despacho');
+// Endpoint para destino por ID 
+if ($method === 'GET' && $resource === 'destino' && $id) {
+    $sql = "SELECT idDestino, Descripcion, idClase FROM Destino WHERE idDestino = '" . addslashes($id) . "'";
+    $result = executeQuery($sql, 'Error al obtener destino', ['Descripcion']);
     echo json_encode($result);
     exit;
 }
-
+// Endpoint para centro despacho
+if ($method === 'GET' && $resource === 'centrodespacho') {
+    $sql = "SELECT idDestino, Descripcion, idClase FROM Destino WHERE Descripcion IS NOT NULL AND Descripcion <> '' ORDER BY Descripcion";
+    $result = executeQuery($sql, 'Error al obtener centros de despacho', ['Descripcion']);
+    echo json_encode($result);
+    exit;
+}
 // Endpoint para destino filtrado por tipo destino (idClase)
 if ($method === 'GET' && $resource === 'destino') {
     $idClase = isset($_GET['idClase']) ? $_GET['idClase'] : null;
@@ -169,7 +175,7 @@ if ($method === 'GET' && $resource === 'destino') {
         $where .= " AND idClase = '" . addslashes($idClase) . "'";
     }
     $sql = "SELECT idDestino, Descripcion, idClase FROM Destino $where ORDER BY Descripcion";
-    $result = executeQuery($sql, 'Error al obtener destinos');
+    $result = executeQuery($sql, 'Error al obtener destinos', ['Descripcion']);
     echo json_encode($result);
     exit;
 }
@@ -190,47 +196,53 @@ if ($method === 'GET' && $resource === 'proveedores') {
 // Endpoint para producto por ID
 if ($method === 'GET' && $resource === 'productos' && $id) {
     $sql = "SELECT DISTINCT idProducto, Producto FROM vclasificacion WHERE idProducto = '" . addslashes($id) . "'";
-    $result = executeQuery($sql, 'Error al obtener producto');
+    $result = executeQuery($sql, 'Error al obtener producto', ['Producto']);
     echo json_encode($result);
     exit;
 }
 // Endpoint para productos
 if ($method === 'GET' && $resource === 'productos') {
     $sql = "SELECT DISTINCT idProducto, Producto FROM vclasificacion WHERE Producto IS NOT NULL AND Producto <> ''";
-    $result = executeQuery($sql, 'Error al obtener productos');
+    $result = executeQuery($sql, 'Error al obtener productos', ['Producto']);
     echo json_encode($result);
     exit;
 }
 // Endpoint para clase por ID
 if ($method === 'GET' && $resource === 'clase' && $id) {
     $sql = "SELECT idClase, Descripcion FROM Clase WHERE idClase = '" . addslashes($id) . "'";
-    $result = executeQuery($sql, 'Error al obtener clase');
+    $result = executeQuery($sql, 'Error al obtener clase', ['Descripcion']);
     echo json_encode($result);
     exit;
 }
 // Endpoint para clase
 if ($method === 'GET' && $resource === 'clase') {
     $sql = "SELECT idClase, Descripcion FROM Clase WHERE Descripcion IS NOT NULL AND Descripcion <> '' ORDER BY Descripcion";
-    $result = executeQuery($sql, 'Error al obtener clases');
+    $result = executeQuery($sql, 'Error al obtener clases', ['Descripcion']);
     echo json_encode($result);
     exit;
 }
 // Endpoint para tipo de análisis por ID
 if ($method === 'GET' && $resource === 'tiposanalisis' && $id) {
     $sql = "SELECT idTipoAnalisis, Descripcion FROM TipoAnalisis WHERE idTipoAnalisis = '" . addslashes($id) . "'";
-    $result = executeQuery($sql, 'Error al obtener tipo de análisis');
+    $result = executeQuery($sql, 'Error al obtener tipo de análisis', ['Descripcion']);
     echo json_encode($result);
     exit;
 }
 // Endpoint para tipos de análisis
 if ($method === 'GET' && $resource === 'tiposanalisis') {
     $sql = "SELECT idTipoAnalisis, Descripcion FROM TipoAnalisis WHERE Descripcion IS NOT NULL AND Descripcion <> ''";
-    $result = executeQuery($sql, 'Error al obtener tipos de análisis');
+    $result = executeQuery($sql, 'Error al obtener tipos de análisis', ['Descripcion']);
     echo json_encode($result);
     exit;
 }
-
-// Endpoint para origenes (solo minas únicas, texto legible)
+// Endpoint para origenes por ID
+if ($method === 'GET' && $resource === 'origenes' && $id) {
+    $sql = "SELECT idOrigen, Mina FROM Origenes WHERE idOrigen = '" . addslashes($id) . "'";
+    $result = executeQuery($sql, 'Error al obtener origen', ['Mina']);
+    echo json_encode($result);
+    exit;
+}
+// Endpoint para origenes 
 if ($method === 'GET' && $resource === 'origenes') {
     $sql = "SELECT MIN(idOrigen) as idOrigen, Mina FROM Origenes WHERE Mina IS NOT NULL AND Mina <> '' GROUP BY Mina ORDER BY Mina";
     $result = executeQuery($sql, 'Error al obtener origenes', ['Mina']);
