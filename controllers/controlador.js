@@ -356,10 +356,10 @@ $(document).ready(function() {
                     window.ultimaRespuestaBolsas = res.data; 
                     tablaConfiguraciones.clear();
                     let filtrados = res.data;
-                    // Si hay centroDespacho seleccionado, filtrar por ese centro
+                    // Si hay centroDespacho seleccionado, filtrar por el ID del centro
                     if (centroDespacho) {
                         filtrados = filtrados.filter(function(item) {
-                            return (item.centroDespachoNombre || item.centro || '').toString() === centroDespacho.toString();
+                            return (item.centro || '').toString() === centroDespacho.toString();
                         });
                     }
                     // Si hay tipoMovimiento seleccionado, filtrar por ese movimiento
