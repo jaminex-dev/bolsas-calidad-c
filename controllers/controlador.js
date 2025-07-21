@@ -343,8 +343,10 @@ $(document).ready(function() {
     });
 
 
-    // --- Recargar tabla de configuraciones solo si hay tipoMovimiento seleccionado ---
-    function recargarTablaConfiguracionesFiltrado(tipoMovimiento) {
+    // --- Recargar tabla de configuraciones y filtrar visualmente por centroDespacho y tipoMovimiento ---
+    function recargarTablaConfiguracionesFiltrado() {
+        const tipoMovimiento = $('#tipoMovimiento').val();
+        const centroDespacho = $('#centroDespacho').val();
         $.ajax({
             url: '../servicios/api-bolsa-calidad/api.php/bolsas',
             method: 'GET',
@@ -353,20 +355,20 @@ $(document).ready(function() {
                 if(res.success && Array.isArray(res.data)) {
                     window.ultimaRespuestaBolsas = res.data; 
                     tablaConfiguraciones.clear();
-                    let primero = [], segundo = [];
-                    if (tipoMovimiento) {
-                        res.data.forEach(function(item) {
-                            if ((item.tipoMovimiento || '').toUpperCase() === tipoMovimiento.toUpperCase()) {
-                                primero.push(item);
-                            } else {
-                                segundo.push(item);
-                            }
+                    let filtrados = res.data;
+                    // Si hay centroDespacho seleccionado, filtrar por ese centro
+                    if (centroDespacho) {
+                        filtrados = filtrados.filter(function(item) {
+                            return (item.centroDespachoNombre || item.centro || '').toString() === centroDespacho.toString();
                         });
-                    } else {
-                        primero = res.data;
                     }
-                    let ordenados = primero.concat(segundo);
-                    ordenados.forEach(function(item) {
+                    // Si hay tipoMovimiento seleccionado, filtrar por ese movimiento
+                    if (tipoMovimiento) {
+                        filtrados = filtrados.filter(function(item) {
+                            return (item.tipoMovimiento || '').toUpperCase() === tipoMovimiento.toUpperCase();
+                        });
+                    }
+                    filtrados.forEach(function(item) {
                         let destinoNombre = (item.destinoNombre && item.destinoNombre !== '' && item.destinoNombre !== null) ? item.destinoNombre : '-';
                         let origenNombre = (item.origenNombre && item.origenNombre !== '' && item.origenNombre !== null) ? item.origenNombre : '-';
                         tablaConfiguraciones.row.add([
@@ -399,14 +401,13 @@ $(document).ready(function() {
         });
     }
 
-    // Evento para recargar tabla solo si hay tipoMovimiento seleccionado
-    $('#tipoMovimiento').on('change', function() {
-        const tipoMovimiento = $(this).val();
-        recargarTablaConfiguracionesFiltrado(tipoMovimiento);
+    // Evento para recargar tabla al cambiar centroDespacho o tipoMovimiento
+    $('#tipoMovimiento, #centroDespacho').on('change', function() {
+        recargarTablaConfiguracionesFiltrado();
     });
 
-    // Al cargar la página, no mostrar datos hasta que se seleccione tipoMovimiento
-    tablaConfiguraciones.clear().draw();
+    // Al cargar la página, mostrar todas las configuraciones guardadas
+    recargarTablaConfiguracionesFiltrado();
 
     // Cargar proveedores (RESTful) y clase para tipoDestino
     function cargarProveedoresSelect(selector) {
