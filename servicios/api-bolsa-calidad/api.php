@@ -68,7 +68,7 @@ $controller = new BolsasController();
 switch ($method) {
     case 'GET':
         if ($resource === 'bolsas') {
-            // Filtros opcionales según la documentación
+            // Filtros 
             $filtros = [];
             if ($id) $filtros['id'] = $id;
             if (isset($_GET['empresa'])) $filtros['empresa'] = $_GET['empresa'];

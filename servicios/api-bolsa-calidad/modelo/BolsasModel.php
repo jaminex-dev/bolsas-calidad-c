@@ -15,12 +15,108 @@ class BolsasModel {
         $origenMap = $this->getNombres('Origenes', 'idOrigen', 'Mina');
         $tipoAnalisisMap = $this->getNombres('TipoAnalisis', 'idTipoAnalisis', 'Descripcion');
 
-        // Consulta principal para obtener las bolsas de calidad
+        // Construir el WHERE dinámicamente según los parámetros recibidos
+        $where = "WHERE b.activo = 1";
+        $sqlParams = [];
+
+        // Filtrar por id (GUID)
+        if (!empty($params['id'])) {
+            $where .= " AND b.id = ?";
+            $sqlParams[] = $params['id'];
+        }
+        // Filtrar por empresa (ID o nombre)
+        if (!empty($params['empresa'])) {
+            $empresaParam = $params['empresa'];
+            // Si es un ID, úsalo directamente
+            if (isset($empresaMap[$empresaParam])) {
+                $where .= " AND b.empresa = ?";
+                $sqlParams[] = $empresaParam;
+            } else {
+                // Si es un nombre, busca el ID
+                $idProveedor = array_search($empresaParam, $empresaMap);
+                if ($idProveedor !== false) {
+                    $where .= " AND b.empresa = ?";
+                    $sqlParams[] = $idProveedor;
+                }
+            }
+        }
+        // Filtrar por centro (ID o nombre)
+        if (!empty($params['centro'])) {
+            $centroParam = $params['centro'];
+            if (isset($centroMap[$centroParam])) {
+                $where .= " AND b.centro = ?";
+                $sqlParams[] = $centroParam;
+            } else {
+                $idCentro = array_search($centroParam, $centroMap);
+                if ($idCentro !== false) {
+                    $where .= " AND b.centro = ?";
+                    $sqlParams[] = $idCentro;
+                }
+            }
+        }
+        // Filtrar por producto (ID o nombre)
+        if (!empty($params['producto'])) {
+            $productoParam = $params['producto'];
+            if (isset($productoMap[$productoParam])) {
+                $where .= " AND b.producto = ?";
+                $sqlParams[] = $productoParam;
+            } else {
+                $idProducto = array_search($productoParam, $productoMap);
+                if ($idProducto !== false) {
+                    $where .= " AND b.producto = ?";
+                    $sqlParams[] = $idProducto;
+                }
+            }
+        }
+        // Filtrar por tipoMovimiento
+        if (!empty($params['tipoMovimiento'])) {
+            $where .= " AND b.tipoMovimiento = ?";
+            $sqlParams[] = $params['tipoMovimiento'];
+        }
+        // Filtrar por tipoDestino
+        if (!empty($params['tipoDestino'])) {
+            $where .= " AND b.tipoDestino = ?";
+            $sqlParams[] = $params['tipoDestino'];
+        }
+        // Filtrar por destino (ID o nombre)
+        if (!empty($params['destino'])) {
+            $destinoParam = $params['destino'];
+            if (isset($destinoMap[$destinoParam])) {
+                $where .= " AND b.destino = ?";
+                $sqlParams[] = $destinoParam;
+            } else {
+                $idDestino = array_search($destinoParam, $destinoMap);
+                if ($idDestino !== false) {
+                    $where .= " AND b.destino = ?";
+                    $sqlParams[] = $idDestino;
+                }
+            }
+        }
+        // Filtrar por origen (ID o nombre)
+        if (!empty($params['origen'])) {
+            $origenParam = $params['origen'];
+            if (isset($origenMap[$origenParam])) {
+                $where .= " AND b.origen = ?";
+                $sqlParams[] = $origenParam;
+            } else {
+                $idOrigen = array_search($origenParam, $origenMap);
+                if ($idOrigen !== false) {
+                    $where .= " AND b.origen = ?";
+                    $sqlParams[] = $idOrigen;
+                }
+            }
+        }
+        // Filtrar por aplicaOrden (booleano/int)
+        if (isset($params['aplicaOrden'])) {
+            $where .= " AND b.aplicaOrden = ?";
+            $sqlParams[] = $params['aplicaOrden'];
+        }
+
         $sql = "SELECT b.id, b.empresa, b.centro, c.Descripcion as centroDespacho, b.producto, b.tipoMovimiento, b.tipoDestino, b.destino, b.origen, b.bolsas, b.aplicaOrden, b.activo, b.fechaCreacion
                 FROM BolsasCalidad b
                 LEFT JOIN Destino c ON b.centro = c.idDestino
-                WHERE b.activo = 1 ORDER BY b.fechaCreacion ASC";
-        $stmt = sqlsrv_query($conn, $sql);
+                $where ORDER BY b.fechaCreacion ASC";
+        $stmt = sqlsrv_query($conn, $sql, $sqlParams);
         $bolsas = [];
         if ($stmt === false) {
             return [];
