@@ -720,7 +720,6 @@ $(document).ready(function() {
             success: function(res) {
                 mostrarAlerta('¡Configuración guardada en base de datos!', 'success');
                 recargarTablaConfiguraciones(); 
-                // Llamar al handler del botón limpiar para limpiar y ocultar los campos
                 $('#btnLimpiar').trigger('click');
             },
             error: function(xhr) {
@@ -736,6 +735,10 @@ $(document).ready(function() {
         $('#formRestricciones').find('.is-invalid').removeClass('is-invalid');
         editIndex = null;
         $('#formRestricciones button[type="submit"]').html('<i class="fa-solid fa-check mr-1"></i> Activar');
+        // Limpiar filtros ANTES de recargar la tabla
+        $('#centroDespacho').val('');
+        $('#tipoMovimiento').val('');
+        recargarTablaConfiguracionesFiltrado();
         mostrarAlerta('Formulario limpiado', 'info');
     });
 

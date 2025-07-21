@@ -27,7 +27,7 @@ class BolsasModel {
         // Filtrar por empresa (ID o nombre)
         if (!empty($params['empresa'])) {
             $empresaParam = $params['empresa'];
-            // Si es un ID, úsalo directamente
+            // Si es un ID,
             if (isset($empresaMap[$empresaParam])) {
                 $where .= " AND b.empresa = ?";
                 $sqlParams[] = $empresaParam;
