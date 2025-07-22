@@ -75,10 +75,26 @@ class BolsasModel {
                 $where .= " AND b.centro = ?";
                 $sqlParams[] = $centroParam;
             } else {
-                $idCentro = array_search($centroParam, $centroMap);
+                $centroParamNorm = $this->normalizarTexto($centroParam);
+                $idCentro = false;
+                $coincidencias = [];
+                foreach ($centroMap as $id => $nombre) {
+                    $nombreNorm = $this->normalizarTexto($nombre);
+                    if ($nombreNorm === $centroParamNorm) {
+                        $idCentro = $id;
+                        break;
+                    }
+                    if (strpos($nombreNorm, $centroParamNorm) !== false || strpos($centroParamNorm, $nombreNorm) !== false) {
+                        $coincidencias[] = $nombre;
+                    }
+                }
                 if ($idCentro !== false) {
                     $where .= " AND b.centro = ?";
                     $sqlParams[] = $idCentro;
+                } else if (!empty($coincidencias)) {
+                    throw new Exception("No se encontró coincidencia exacta para el centro. ¿Quizás quiso decir: " . implode(', ', $coincidencias) . "?");
+                } else {
+                    throw new Exception("No se encontró ningún centro que coincida con el nombre proporcionado.");
                 }
             }
         }
@@ -101,10 +117,35 @@ class BolsasModel {
             $where .= " AND b.tipoMovimiento = ?";
             $sqlParams[] = $params['tipoMovimiento'];
         }
-        // Filtrar por tipoDestino
+        // Filtrar por tipoDestino (ID o nombre, con normalización y sugerencias)
         if (!empty($params['tipoDestino'])) {
-            $where .= " AND b.tipoDestino = ?";
-            $sqlParams[] = $params['tipoDestino'];
+            $tipoDestinoParam = $params['tipoDestino'];
+            if (isset($tipoDestinoMap[$tipoDestinoParam])) {
+                $where .= " AND b.tipoDestino = ?";
+                $sqlParams[] = $tipoDestinoParam;
+            } else {
+                $tipoDestinoParamNorm = $this->normalizarTexto($tipoDestinoParam);
+                $idTipoDestino = false;
+                $coincidencias = [];
+                foreach ($tipoDestinoMap as $id => $nombre) {
+                    $nombreNorm = $this->normalizarTexto($nombre);
+                    if ($nombreNorm === $tipoDestinoParamNorm) {
+                        $idTipoDestino = $id;
+                        break;
+                    }
+                    if (strpos($nombreNorm, $tipoDestinoParamNorm) !== false || strpos($tipoDestinoParamNorm, $nombreNorm) !== false) {
+                        $coincidencias[] = $nombre;
+                    }
+                }
+                if ($idTipoDestino !== false) {
+                    $where .= " AND b.tipoDestino = ?";
+                    $sqlParams[] = $idTipoDestino;
+                } else if (!empty($coincidencias)) {
+                    throw new Exception("No se encontró coincidencia exacta para el tipoDestino. ¿Quizás quiso decir: " . implode(', ', $coincidencias) . "?");
+                } else {
+                    throw new Exception("No se encontró ningún tipoDestino que coincida con el nombre proporcionado.");
+                }
+            }
         }
         // Filtrar por destino (ID o nombre)
         if (!empty($params['destino'])) {
@@ -120,17 +161,33 @@ class BolsasModel {
                 }
             }
         }
-        // Filtrar por origen (ID o nombre)
+        // Filtrar por origen (ID o nombre, con normalización y sugerencias)
         if (!empty($params['origen'])) {
             $origenParam = $params['origen'];
             if (isset($origenMap[$origenParam])) {
                 $where .= " AND b.origen = ?";
                 $sqlParams[] = $origenParam;
             } else {
-                $idOrigen = array_search($origenParam, $origenMap);
+                $origenParamNorm = $this->normalizarTexto($origenParam);
+                $idOrigen = false;
+                $coincidencias = [];
+                foreach ($origenMap as $id => $nombre) {
+                    $nombreNorm = $this->normalizarTexto($nombre);
+                    if ($nombreNorm === $origenParamNorm) {
+                        $idOrigen = $id;
+                        break;
+                    }
+                    if (strpos($nombreNorm, $origenParamNorm) !== false || strpos($origenParamNorm, $nombreNorm) !== false) {
+                        $coincidencias[] = $nombre;
+                    }
+                }
                 if ($idOrigen !== false) {
                     $where .= " AND b.origen = ?";
                     $sqlParams[] = $idOrigen;
+                } else if (!empty($coincidencias)) {
+                    throw new Exception("No se encontró coincidencia exacta para el origen. ¿Quizás quiso decir: " . implode(', ', $coincidencias) . "?");
+                } else {
+                    throw new Exception("No se encontró ningún origen que coincida con el nombre proporcionado.");
                 }
             }
         }
@@ -157,6 +214,10 @@ class BolsasModel {
         foreach ($bolsas as &$bolsa) {
             $bolsa['empresaNombre'] = $empresaMap[$bolsa['empresa']] ?? $bolsa['empresa'];
             $bolsa['centroDespachoNombre'] = $centroMap[$bolsa['centro']] ?? $bolsa['centro'];
+            // Eliminar campo duplicado centroDespacho si existe
+            if (isset($bolsa['centroDespacho'])) {
+                unset($bolsa['centroDespacho']);
+            }
             $bolsa['productoNombre'] = $productoMap[$bolsa['producto']] ?? $bolsa['producto'];
             $bolsa['tipoDestinoNombre'] = $tipoDestinoMap[$bolsa['tipoDestino']] ?? $bolsa['tipoDestino'];
             $bolsa['destinoNombre'] = $destinoMap[$bolsa['destino']] ?? ($bolsa['destino'] ?? '');
