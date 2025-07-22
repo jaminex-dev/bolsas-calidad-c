@@ -345,30 +345,32 @@ $(document).ready(function() {
 
     // --- Recargar tabla de configuraciones y filtrar visualmente por centroDespacho y tipoMovimiento ---
     function recargarTablaConfiguracionesFiltrado() {
-        const tipoMovimiento = $('#tipoMovimiento').val();
-        const centroDespacho = $('#centroDespacho').val();
+        // Obtener valores de todos los filtros
+        const filtros = {
+            empresa: $('#empresa').val(),
+            centro: $('#centroDespacho').val(),
+            producto: $('#producto').val(),
+            tipoMovimiento: $('#tipoMovimiento').val(),
+            tipoDestino: $('#tipoDestino').val(),
+            destino: $('#destino').val(),
+            origen: $('#origenes').val(),
+            aplicaOrden: $('#aplicaOrden').is(':checked') ? 1 : ''
+        };
+        // Armar query string solo con filtros seleccionados
+        let params = Object.entries(filtros)
+            .filter(([k, v]) => v !== '' && v !== null && typeof v !== 'undefined')
+            .map(([k, v]) => encodeURIComponent(k) + '=' + encodeURIComponent(v))
+            .join('&');
+        let url = '../servicios/api-bolsa-calidad/api.php/bolsas' + (params ? '?' + params : '');
         $.ajax({
-            url: '../servicios/api-bolsa-calidad/api.php/bolsas',
+            url: url,
             method: 'GET',
             dataType: 'json',
             success: function(res) {
                 if(res.success && Array.isArray(res.data)) {
-                    window.ultimaRespuestaBolsas = res.data; 
+                    window.ultimaRespuestaBolsas = res.data;
                     tablaConfiguraciones.clear();
-                    let filtrados = res.data;
-                    // Si hay centroDespacho seleccionado, filtrar por el ID del centro
-                    if (centroDespacho) {
-                        filtrados = filtrados.filter(function(item) {
-                            return (item.centro || '').toString() === centroDespacho.toString();
-                        });
-                    }
-                    // Si hay tipoMovimiento seleccionado, filtrar por ese movimiento
-                    if (tipoMovimiento) {
-                        filtrados = filtrados.filter(function(item) {
-                            return (item.tipoMovimiento || '').toUpperCase() === tipoMovimiento.toUpperCase();
-                        });
-                    }
-                    filtrados.forEach(function(item) {
+                    res.data.forEach(function(item) {
                         let destinoNombre = (item.destinoNombre && item.destinoNombre !== '' && item.destinoNombre !== null) ? item.destinoNombre : '-';
                         let origenNombre = (item.origenNombre && item.origenNombre !== '' && item.origenNombre !== null) ? item.origenNombre : '-';
                         tablaConfiguraciones.row.add([
@@ -401,8 +403,8 @@ $(document).ready(function() {
         });
     }
 
-    // Evento para recargar tabla al cambiar centroDespacho o tipoMovimiento
-    $('#tipoMovimiento, #centroDespacho').on('change', function() {
+    // Evento para recargar tabla al cambiar cualquier filtro
+    $('#empresa, #centroDespacho, #producto, #tipoMovimiento, #tipoDestino, #destino, #origenes, #aplicaOrden').on('change input', function() {
         recargarTablaConfiguracionesFiltrado();
     });
 
