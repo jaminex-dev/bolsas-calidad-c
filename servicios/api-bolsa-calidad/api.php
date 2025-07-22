@@ -154,7 +154,7 @@ function executeQuery($sql, $errorMessage = 'Error en consulta SQL', $limpiarCam
 }
 
 // ENDPOINTS 
-// Endpoint para centro despacho
+// Endpoint para centro despacho y Destino
 if ($method === 'GET' && $resource === 'centrodespacho') {
     $sql = "SELECT idDestino, Descripcion, idClase FROM Destino WHERE Descripcion IS NOT NULL AND Descripcion <> '' ORDER BY Descripcion";
     $result = executeQuery($sql, 'Error al obtener centros de despacho', ['Descripcion']);

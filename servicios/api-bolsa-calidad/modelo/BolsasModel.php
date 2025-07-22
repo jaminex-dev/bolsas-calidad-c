@@ -3,6 +3,16 @@
 include '../conexion.php';
 
 class BolsasModel {
+    // Normaliza texto para comparación robusta
+    private function normalizarTexto($texto) {
+        if (!is_string($texto)) return $texto;
+        $texto = html_entity_decode($texto, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $texto = strtolower(trim($texto));
+        $texto = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $texto); // quita acentos
+        $texto = preg_replace('/[^a-z0-9 ]/', '', $texto); // solo letras, números y espacios
+        $texto = preg_replace('/\s+/', ' ', $texto); // espacios simples
+        return $texto;
+    }
     
     public function getDatos($params = []) {
         global $conn;
@@ -24,7 +34,7 @@ class BolsasModel {
             $where .= " AND b.id = ?";
             $sqlParams[] = $params['id'];
         }
-        // Filtrar por empresa (ID o nombre)
+        // Filtrar por empresa (ID o nombre, con normalización y sugerencias)
         if (!empty($params['empresa'])) {
             $empresaParam = $params['empresa'];
             // Si es un ID,
@@ -32,11 +42,29 @@ class BolsasModel {
                 $where .= " AND b.empresa = ?";
                 $sqlParams[] = $empresaParam;
             } else {
-                // Si es un nombre, busca el ID
-                $idProveedor = array_search($empresaParam, $empresaMap);
+                // Normaliza el parámetro y los nombres del mapeo
+                $empresaParamNorm = $this->normalizarTexto($empresaParam);
+                $idProveedor = false;
+                $coincidencias = [];
+                foreach ($empresaMap as $id => $nombre) {
+                    $nombreNorm = $this->normalizarTexto($nombre);
+                    if ($nombreNorm === $empresaParamNorm) {
+                        $idProveedor = $id;
+                        break;
+                    }
+                    // Guardar coincidencias parciales para sugerencias
+                    if (strpos($nombreNorm, $empresaParamNorm) !== false || strpos($empresaParamNorm, $nombreNorm) !== false) {
+                        $coincidencias[] = $nombre;
+                    }
+                }
                 if ($idProveedor !== false) {
                     $where .= " AND b.empresa = ?";
                     $sqlParams[] = $idProveedor;
+                } else if (!empty($coincidencias)) {
+                    // Si no hay coincidencia exacta, pero sí sugerencias, lanzar excepción o devolver sugerencias
+                    throw new Exception("No se encontró coincidencia exacta para la empresa. ¿Quizás quiso decir: " . implode(', ', $coincidencias) . "?");
+                } else {
+                    throw new Exception("No se encontró ninguna empresa que coincida con el nombre proporcionado.");
                 }
             }
         }

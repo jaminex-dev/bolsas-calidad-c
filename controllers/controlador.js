@@ -773,6 +773,7 @@ $(document).ready(function() {
             if(item.tipoMovimiento) $('#editMovimiento').val(item.tipoMovimiento); else $('#editMovimiento').val('');
             if(item.tipoDestino) $('#editTipoDestino').val(item.tipoDestino); else $('#editTipoDestino').val('');
             if(item.destino) $('#editDestino').val(item.destino); else $('#editDestino').val('');
+
             if(item.origen) $('#editOrigenes').val(item.origen); else $('#editOrigenes').val('');
             if(item.bolsas) $('#editBolsas').val(item.bolsas); else $('#editBolsas').val('1');
             if(item.aplicaOrden == 1 || item.aplicaOrden === true) {
@@ -793,14 +794,43 @@ $(document).ready(function() {
                         success: function(res) {
                             $destino.empty();
                             $destino.append('<option value="">Seleccione...</option>');
+                            var existeDestino = false;
                             if(res.success && Array.isArray(res.data) && res.data.length > 0) {
                                 res.data.forEach(function(item) {
-                                    $destino.append('<option value="'+item.idDestino+'">'+(item.Descripcion || '-')+'</option>');
+                                    var selected = (selectedDestino && item.idDestino == selectedDestino) ? ' selected' : '';
+                                    if(selected) existeDestino = true;
+                                    $destino.append('<option value="'+item.idDestino+'"'+selected+'>'+(item.Descripcion || '-')+'</option>');
                                 });
+                                // Si el destino actual no está en la lista, lo agregamos manualmente
+                                if(selectedDestino && !existeDestino) {
+                                    var nombreDestino = '';
+                                    if (window.ultimaRespuestaBolsas && Array.isArray(window.ultimaRespuestaBolsas)) {
+                                        var bolsaEdit = window.ultimaRespuestaBolsas.find(function(b) { return b.destino == selectedDestino; });
+                                        if (bolsaEdit && bolsaEdit.destinoNombre) {
+                                            nombreDestino = bolsaEdit.destinoNombre;
+                                        }
+                                    }
+                                    $destino.append('<option value="'+selectedDestino+'" selected="selected">'+(nombreDestino || 'Destino actual')+'</option>');
+                                }
                                 $destino.prop('disabled', false);
+                                // Set value after options are loaded
                                 if(selectedDestino) $destino.val(selectedDestino);
                             } else {
-                                $destino.prop('disabled', true);
+                                // Si no hay datos pero hay un destino seleccionado, lo agregamos igual
+                                if(selectedDestino) {
+                                    var nombreDestino = '';
+                                    if (window.ultimaRespuestaBolsas && Array.isArray(window.ultimaRespuestaBolsas)) {
+                                        var bolsaEdit = window.ultimaRespuestaBolsas.find(function(b) { return b.destino == selectedDestino; });
+                                        if (bolsaEdit && bolsaEdit.destinoNombre) {
+                                            nombreDestino = bolsaEdit.destinoNombre;
+                                        }
+                                    }
+                                    $destino.append('<option value="'+selectedDestino+'" selected="selected">'+(nombreDestino || 'Destino actual')+'</option>');
+                                    $destino.prop('disabled', false);
+                                    $destino.val(selectedDestino);
+                                } else {
+                                    $destino.prop('disabled', true);
+                                }
                             }
                         },
                         error: function(xhr) {
@@ -820,7 +850,7 @@ $(document).ready(function() {
 
             // Inicializar destino en edición si hay tipoDestino
             if($('#editTipoDestino').val()) {
-                cargarDestinoEdicion($('#editTipoDestino').val(), $('#editDestino').val());
+                cargarDestinoEdicion($('#editTipoDestino').val(), item.destino);
             } else {
                 $('#editDestino').empty().append('<option value="">Seleccione...</option>').prop('disabled', true);
             }
