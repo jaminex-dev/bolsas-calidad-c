@@ -68,7 +68,6 @@ $controller = new BolsasController();
 switch ($method) {
     case 'GET':
         if ($resource === 'bolsas') {
-            // Filtros 
             $filtros = [];
             if ($id) $filtros['id'] = $id;
             if (isset($_GET['empresa'])) $filtros['empresa'] = $_GET['empresa'];
@@ -78,8 +77,17 @@ switch ($method) {
             if (isset($_GET['tipoOrigen'])) $filtros['tipoOrigen'] = $_GET['tipoOrigen'];
             if (isset($_GET['tipoDestino'])) $filtros['tipoDestino'] = $_GET['tipoDestino'];
             if (isset($_GET['destino'])) $filtros['destino'] = $_GET['destino'];
+            if (isset($_GET['origen'])) $filtros['origen'] = $_GET['origen'];
             if (isset($_GET['aplicaOrden'])) $filtros['aplicaOrden'] = $_GET['aplicaOrden'];
-            $controller->get($filtros);
+            try {
+                $controller->get($filtros);
+            } catch (Exception $e) {
+                http_response_code(400);
+                echo json_encode([
+                    'success' => false,
+                    'error' => $e->getMessage()
+                ]);
+            }
         }
         break;
     case 'POST':

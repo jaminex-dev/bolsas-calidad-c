@@ -147,20 +147,6 @@ class BolsasModel {
                 }
             }
         }
-        // Filtrar por destino (ID o nombre)
-        if (!empty($params['destino'])) {
-            $destinoParam = $params['destino'];
-            if (isset($destinoMap[$destinoParam])) {
-                $where .= " AND b.destino = ?";
-                $sqlParams[] = $destinoParam;
-            } else {
-                $idDestino = array_search($destinoParam, $destinoMap);
-                if ($idDestino !== false) {
-                    $where .= " AND b.destino = ?";
-                    $sqlParams[] = $idDestino;
-                }
-            }
-        }
         // Filtrar por origen (ID o nombre, con normalización y sugerencias)
         if (!empty($params['origen'])) {
             $origenParam = $params['origen'];
@@ -188,6 +174,20 @@ class BolsasModel {
                     throw new Exception("No se encontró coincidencia exacta para el origen. ¿Quizás quiso decir: " . implode(', ', $coincidencias) . "?");
                 } else {
                     throw new Exception("No se encontró ningún origen que coincida con el nombre proporcionado.");
+                }
+            }
+        }
+        // Filtrar por destino (ID o nombre)
+        if (!empty($params['destino'])) {
+            $destinoParam = $params['destino'];
+            if (isset($destinoMap[$destinoParam])) {
+                $where .= " AND b.destino = ?";
+                $sqlParams[] = $destinoParam;
+            } else {
+                $idDestino = array_search($destinoParam, $destinoMap);
+                if ($idDestino !== false) {
+                    $where .= " AND b.destino = ?";
+                    $sqlParams[] = $idDestino;
                 }
             }
         }
